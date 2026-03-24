@@ -52,27 +52,54 @@ jobs:
   e2e-encryption:
     runs-on: [self-hosted, tower]
     needs: [backend-tests]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: oscar_test
+          POSTGRES_USER: oscar
+          POSTGRES_PASSWORD: oscar_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
+
+      # Checkout nicodaimus-crypto alongside oscar (local file dependency)
+      - uses: actions/checkout@v4
+        with:
+          repository: Paxtiny/nicodaimus-crypto
+          path: ../nicodaimus-crypto
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
 
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Build oscar Docker image
-        run: docker build . -t oscar:e2e-test --build-arg SKIP_TESTS=true
-
-      - name: Start test stack
+      # Build and run Go backend natively (not Docker - avoids crypto dep issue)
+      - name: Build oscar backend
         run: |
-          docker compose -f tests/docker-compose.test.yml up -d
-          # Wait for backend to be healthy
+          CGO_ENABLED=1 go build -o oscar-server ./cmd/oscar.go
+        env:
+          OSCAR_DATABASE_TYPE: postgres
+
+      - name: Start oscar backend
+        run: |
+          ./oscar-server &
           echo "Waiting for oscar backend..."
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8080/api/v1/tokens/list.json > /dev/null 2>&1; then
@@ -81,11 +108,21 @@ jobs:
             fi
             sleep 2
           done
+        env:
+          OSCAR_DATABASE_TYPE: postgres
+          OSCAR_DATABASE_HOST: localhost
+          OSCAR_DATABASE_PORT: "5432"
+          OSCAR_DATABASE_NAME: oscar_test
+          OSCAR_DATABASE_USER: oscar
+          OSCAR_DATABASE_PASSWD: oscar_test
+          OSCAR_HTTP_PORT: "8080"
+          OSCAR_ENABLE_USER_REGISTER: "true"
+          OSCAR_ENABLE_INTERNAL_AUTH: "true"
+          OSCAR_SECRET_KEY: e2e-test-secret-key-not-for-production
 
       - name: Start frontend dev server
         run: |
           npm run serve &
-          # Wait for Vite dev server
           for i in $(seq 1 20); do
             if curl -sf http://localhost:8081 > /dev/null 2>&1; then
               echo "Frontend dev server is ready"
@@ -105,9 +142,7 @@ jobs:
         if: always()
         with:
           name: e2e-test-results-${{ github.run_id }}
-          path: |
-            test-results/
-            test-results/playwright.xml
+          path: test-results/
           retention-days: 30
 
       - name: Upload screenshots on failure
@@ -118,9 +153,9 @@ jobs:
           path: test-results/**/*.png
           retention-days: 7
 
-      - name: Stop test stack
+      - name: Cleanup backend
         if: always()
-        run: docker compose -f tests/docker-compose.test.yml down -v
+        run: pkill -f oscar-server || true
 
   notify:
     runs-on: [self-hosted, tower]
