@@ -94,10 +94,7 @@ jobs:
 
       # Build and run Go backend natively (not Docker - avoids crypto dep issue)
       - name: Build oscar backend
-        run: |
-          CGO_ENABLED=1 go build -o oscar-server ./cmd/oscar.go
-        env:
-          OSCAR_DATABASE_TYPE: postgres
+        run: CGO_ENABLED=1 go build -o oscar-server .
 
       - name: Start oscar backend
         run: |
