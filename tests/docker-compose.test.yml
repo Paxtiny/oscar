@@ -1,0 +1,54 @@
+# Docker Compose stack for E2E tests.
+# Starts PostgreSQL + oscar backend + frontend dev server.
+# Used by CI (GitHub Actions) and can be used locally.
+#
+# Usage:
+#   docker compose -f tests/docker-compose.test.yml up -d
+#   npx playwright test
+#   docker compose -f tests/docker-compose.test.yml down -v
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: oscar_test
+      POSTGRES_USER: oscar
+      POSTGRES_PASSWORD: oscar_test
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready -U oscar -d oscar_test
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data  # RAM-backed for speed
+
+  oscar-backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        SKIP_TESTS: "true"  # Tests already run separately
+    environment:
+      OSCAR_DATABASE_TYPE: postgres
+      OSCAR_DATABASE_HOST: postgres
+      OSCAR_DATABASE_PORT: "5432"
+      OSCAR_DATABASE_NAME: oscar_test
+      OSCAR_DATABASE_USER: oscar
+      OSCAR_DATABASE_PASSWD: oscar_test
+      OSCAR_HTTP_PORT: "8080"
+      OSCAR_ENABLE_USER_REGISTER: "true"
+      OSCAR_ENABLE_INTERNAL_AUTH: "true"
+      OSCAR_SECRET_KEY: e2e-test-secret-key-not-for-production
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: wget -qO- http://localhost:8080/api/v1/tokens/list.json || exit 1
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s

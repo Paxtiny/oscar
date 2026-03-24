@@ -7,27 +7,127 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  OSCAR_TEST_URL: http://localhost:8081
+
 jobs:
-  verify-runner:
+  backend-tests:
     runs-on: [self-hosted, tower]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: oscar_test
+          POSTGRES_USER: oscar
+          POSTGRES_PASSWORD: oscar_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: Runner environment check
-        run: |
-          echo "Runner: $(hostname)"
-          echo "OS: $(uname -a)"
-          echo "Docker: $(docker --version)"
-          echo "Docker Compose: $(docker compose version)"
-          echo "Disk: $(df -h / | tail -1)"
-          echo "Memory: $(free -h | grep Mem)"
-
-      - name: Docker sanity check
-        run: docker run --rm hello-world
-
-      - name: Upload test artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/setup-go@v5
         with:
-          name: runner-verify-${{ github.run_id }}
-          path: README.md
-          retention-days: 1
+          go-version: '1.25'
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Go tests (JUnit XML)
+        run: |
+          go install gotest.tools/gotestsum@latest
+          gotestsum --junitfile test-results/go.xml -- ./... -v
+
+      - name: Upload Go test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: go-test-results-${{ github.run_id }}
+          path: test-results/go.xml
+          retention-days: 30
+
+  e2e-encryption:
+    runs-on: [self-hosted, tower]
+    needs: [backend-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Build oscar Docker image
+        run: docker build . -t oscar:e2e-test --build-arg SKIP_TESTS=true
+
+      - name: Start test stack
+        run: |
+          docker compose -f tests/docker-compose.test.yml up -d
+          # Wait for backend to be healthy
+          echo "Waiting for oscar backend..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/api/v1/tokens/list.json > /dev/null 2>&1; then
+              echo "Backend is ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Start frontend dev server
+        run: |
+          npm run serve &
+          # Wait for Vite dev server
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:8081 > /dev/null 2>&1; then
+              echo "Frontend dev server is ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run Playwright encryption E2E tests
+        run: npx playwright test --reporter=list,junit
+        env:
+          OSCAR_TEST_URL: http://localhost:8081
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/playwright.xml
+
+      - name: Upload Playwright results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results-${{ github.run_id }}
+          path: |
+            test-results/
+            test-results/playwright.xml
+          retention-days: 30
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-screenshots-${{ github.run_id }}
+          path: test-results/**/*.png
+          retention-days: 7
+
+      - name: Stop test stack
+        if: always()
+        run: docker compose -f tests/docker-compose.test.yml down -v
+
+  notify:
+    runs-on: [self-hosted, tower]
+    needs: [backend-tests, e2e-encryption]
+    if: failure()
+    steps:
+      - name: Notify Telegram
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TG_CHAT_ID }}&text=CI failed: ${{ github.workflow }} - ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

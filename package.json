@@ -16,7 +16,9 @@
     "build": "cross-env NODE_ENV=production vite build",
     "serve:dist": "vite preview",
     "lint": "vue-tsc --noEmit && eslint . --fix",
-    "test": "cross-env TS_NODE_PROJECT=\"./tsconfig.jest.json\" jest"
+    "test": "cross-env TS_NODE_PROJECT=\"./tsconfig.jest.json\" jest",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
@@ -53,6 +55,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
+    "@playwright/test": "^1.58.2",
     "@tsconfig/node24": "^24.0.4",
     "@types/cbor-js": "^0.1.1",
     "@types/crypto-js": "^4.2.2",
