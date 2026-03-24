@@ -1,0 +1,33 @@
+name: CI (Self-Hosted)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-runner:
+    runs-on: [self-hosted, tower]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Runner environment check
+        run: |
+          echo "Runner: $(hostname)"
+          echo "OS: $(uname -a)"
+          echo "Docker: $(docker --version)"
+          echo "Docker Compose: $(docker compose version)"
+          echo "Disk: $(df -h / | tail -1)"
+          echo "Memory: $(free -h | grep Mem)"
+
+      - name: Docker sanity check
+        run: docker run --rm hello-world
+
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runner-verify-${{ github.run_id }}
+          path: README.md
+          retention-days: 1
