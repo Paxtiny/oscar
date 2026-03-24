@@ -68,12 +68,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Checkout nicodaimus-crypto alongside oscar (local file dependency)
+      # Checkout nicodaimus-crypto and symlink to expected location
       - uses: actions/checkout@v4
         with:
           repository: Paxtiny/nicodaimus-crypto
-          path: ../nicodaimus-crypto
-          token: ${{ secrets.GITHUB_TOKEN }}
+          path: nicodaimus-crypto
+
+      - name: Symlink nicodaimus-crypto to parent dir (matches file:../nicodaimus-crypto)
+        run: ln -sf "$GITHUB_WORKSPACE/nicodaimus-crypto" ../nicodaimus-crypto
 
       - uses: actions/setup-go@v5
         with:
