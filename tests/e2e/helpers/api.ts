@@ -174,13 +174,24 @@ export async function createCategory(
     token: string,
     opts: { name?: string } = {}
 ): Promise<{ categoryId: string }> {
-    const res = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+    // ezBookkeeping uses two-level categories: primary -> sub-category.
+    // Transactions require a sub-category (not primary).
+    // Use batch create to make parent + child in one call.
+    const res = await request.post(`${API_BASE}/api/v1/transaction/categories/add_batch.json`, {
         headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
         data: {
-            name: opts.name || 'Test Expenses',
-            type: 2,           // Expense category
-            icon: '1',         // string (Go binding: json:"icon,string")
-            color: 'ef4444',
+            categories: [{
+                name: opts.name || 'Test Expenses',
+                type: 2,           // Expense
+                icon: '1',
+                color: 'ef4444',
+                subCategories: [{
+                    name: 'General',
+                    type: 2,
+                    icon: '1',
+                    color: 'ef4444',
+                }],
+            }],
         },
     });
 
@@ -189,7 +200,17 @@ export async function createCategory(
         throw new Error(`Category creation failed: ${JSON.stringify(data)}`);
     }
 
-    return { categoryId: data.result.id };
+    // Return the sub-category ID (first child of first parent)
+    const categories = data.result;
+    if (Array.isArray(categories) && categories.length > 0) {
+        const parent = categories[0];
+        if (parent.subCategories && parent.subCategories.length > 0) {
+            return { categoryId: parent.subCategories[0].id };
+        }
+        return { categoryId: parent.id };
+    }
+
+    throw new Error('No category returned from batch create');
 }
 
 /**
