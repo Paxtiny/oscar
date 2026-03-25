@@ -451,6 +451,13 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/transaction/tags/move.json", bindApi(api.TransactionTags.TagMoveHandler))
 			apiV1Route.POST("/transaction/tags/delete.json", bindApi(api.TransactionTags.TagDeleteHandler))
 
+			// Budgets
+			apiV1Route.GET("/budgets/list.json", bindApi(api.BudgetsApiInstance.BudgetListHandler))
+			apiV1Route.GET("/budgets/get.json", bindApi(api.BudgetsApiInstance.BudgetGetHandler))
+			apiV1Route.POST("/budgets/add.json", bindApi(api.BudgetsApiInstance.BudgetCreateHandler))
+			apiV1Route.POST("/budgets/modify.json", bindApi(api.BudgetsApiInstance.BudgetModifyHandler))
+			apiV1Route.POST("/budgets/delete.json", bindApi(api.BudgetsApiInstance.BudgetDeleteHandler))
+
 			// Transaction Templates
 			apiV1Route.GET("/transaction/templates/list.json", bindApi(api.TransactionTemplates.TemplateListHandler))
 			apiV1Route.GET("/transaction/templates/get.json", bindApi(api.TransactionTemplates.TemplateGetHandler))
