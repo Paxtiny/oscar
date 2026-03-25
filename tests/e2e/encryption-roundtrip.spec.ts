@@ -18,6 +18,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
     let token: string;
     let username: string;
     let password: string;
+    let vaultCreated = false;
 
     test.beforeAll(async ({ request }) => {
         const user = await registerUser(request);
@@ -31,49 +32,56 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
     });
 
     /**
-     * Helper: set up vault for the test user through the UI.
+     * Helper: ensure vault exists (create if needed) and unlock it.
+     * Handles retries gracefully - if vault already exists, just unlocks.
      */
-    async function setupVaultViaUI(page: import('@playwright/test').Page): Promise<void> {
-        await injectAuthState(page, { token, hasVault: false });
-        await navigateToApp(page, '/vault/setup');
-        await page.waitForURL(url => url.hash.includes('/vault/setup'));
+    async function ensureVaultUnlocked(page: import('@playwright/test').Page): Promise<void> {
+        const loginResult = await loginUser(page.request, username, password);
 
-        const passphraseInputs = page.locator('input[type="password"]');
-        await passphraseInputs.first().fill(TEST_PASSPHRASE);
-        await passphraseInputs.nth(1).fill(TEST_PASSPHRASE);
+        if (!loginResult.hasVault && !vaultCreated) {
+            // Need to create the vault first
+            await injectAuthState(page, { token: loginResult.token, hasVault: false });
+            await navigateToApp(page, '/vault/setup');
+            await page.waitForURL(url => url.hash.includes('/vault/setup'));
 
-        const checkbox = page.locator('.v-checkbox input, input[type="checkbox"]').first();
-        await checkbox.check({ force: true });
+            const passphraseInputs = page.locator('input[type="password"]');
+            await passphraseInputs.first().fill(TEST_PASSPHRASE);
+            await passphraseInputs.nth(1).fill(TEST_PASSPHRASE);
 
-        // Wait for zxcvbn to evaluate passphrase strength before clicking
-        const submitBtn = page.getByRole('button', { name: /create vault/i });
-        await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
-        await submitBtn.click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
+            const checkbox = page.locator('.v-checkbox input, input[type="checkbox"]').first();
+            await checkbox.check({ force: true });
+
+            const submitBtn = page.getByRole('button', { name: /create vault/i });
+            await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
+            await submitBtn.click();
+            await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
+            vaultCreated = true;
+        } else {
+            // Vault exists - just unlock
+            await injectAuthState(page, { token: loginResult.token, hasVault: true });
+            await navigateToApp(page, '/vault/unlock');
+            await page.waitForURL(url => url.hash.includes('/vault/unlock'));
+
+            await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
+            await page.getByRole('button', { name: /unlock/i }).click();
+            await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
+        }
     }
 
     /**
-     * Helper: unlock vault for the test user through the UI.
+     * Navigate within the app without triggering a full page reload.
+     * Uses hash change instead of page.goto() to preserve in-memory vault state.
      */
-    async function unlockVaultViaUI(page: import('@playwright/test').Page): Promise<void> {
-        const loginResult = await loginUser(page.request, username, password);
-        await injectAuthState(page, { token: loginResult.token, hasVault: true });
-        await navigateToApp(page, '/vault/unlock');
-        await page.waitForURL(url => url.hash.includes('/vault/unlock'));
-
-        await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
-        await page.getByRole('button', { name: /unlock/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
+    async function navigateInApp(page: import('@playwright/test').Page, hash: string): Promise<void> {
+        await page.evaluate((h) => { window.location.hash = '#' + h; }, hash);
+        await page.waitForLoadState('networkidle');
     }
 
     test('roundtrip-single: create transaction, reload, verify fields match', async ({ page }) => {
-        // Set up vault first
-        await setupVaultViaUI(page);
+        await ensureVaultUnlocked(page);
 
-        // Navigate to add transaction
-        // The transaction list page has a FAB or "+" button to add
-        await navigateToApp(page, '/transaction/list');
-        await page.waitForLoadState('networkidle');
+        // Navigate to add transaction (use hash change to preserve vault state)
+        await navigateInApp(page, '/transaction/list');
 
         // Look for the add transaction button (FAB or link)
         const addButton = page.locator(
@@ -85,7 +93,6 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
             await page.waitForLoadState('networkidle');
 
             // Fill in transaction details
-            // Amount field - look for numeric input
             const amountInput = page.locator(
                 'input[type="number"], input[inputmode="decimal"], input[placeholder*="amount" i]'
             ).first();
@@ -93,7 +100,6 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
             if (await amountInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
                 await amountInput.fill('42.50');
 
-                // Try to find and fill comment/note field
                 const commentInput = page.locator(
                     'input[placeholder*="comment" i], input[placeholder*="note" i], textarea'
                 ).first();
@@ -101,7 +107,6 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
                     await commentInput.fill('E2E test transaction - encryption roundtrip');
                 }
 
-                // Submit the transaction
                 const saveButton = page.getByRole('button', { name: /save|submit|add|confirm/i }).first();
                 if (await saveButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
                     await saveButton.click();
@@ -114,12 +119,9 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         await page.reload();
         await page.waitForLoadState('networkidle');
 
-        // After reload, session is cleared - wait for router guard to redirect to vault unlock
-        // (the check must wait because Vue router guard runs after app mount)
-        await page.waitForURL(url =>
-            url.hash.includes('/vault/unlock') || !url.hash.includes('/vault/'),
-            { timeout: 10_000 }
-        ).catch(() => { /* may already be past vault */ });
+        // After reload, in-memory vault state is cleared - need to unlock again
+        // Wait for Vue router to initialize and redirect
+        await page.waitForTimeout(1_000);
 
         if (page.url().includes('/vault/unlock')) {
             await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
@@ -128,31 +130,31 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         }
 
         // Navigate to transaction list
-        await navigateToApp(page, '/transaction/list');
+        await navigateInApp(page, '/transaction/list');
         await page.waitForLoadState('networkidle');
 
         // Verify the transaction amount is visible after decryption
-        // The amount "42.50" should appear somewhere on the page
         const pageContent = await page.textContent('body');
         expect(pageContent).toContain('42.50');
     });
 
     test('roundtrip-multi-device: data visible on second browser', async ({ browser, request }) => {
-        // Ensure vault is set up (from previous test)
+        // Ensure vault is set up (from previous test or via API check)
         const loginResult = await loginUser(request, username, password);
+        expect(loginResult.hasVault).toBe(true);
 
-        // Context 1: create data
+        // Context 1: unlock and access data
         const ctx1 = await browser.newContext();
         const page1 = await ctx1.newPage();
         attachDebugListeners(page1);
 
-        // Context 2: read data
+        // Context 2: unlock and verify same data
         const ctx2 = await browser.newContext();
         const page2 = await ctx2.newPage();
         attachDebugListeners(page2);
 
         try {
-            // Device 1: unlock and verify we can access the app
+            // Device 1: unlock vault
             await injectAuthState(page1, { token: loginResult.token, hasVault: true });
             await navigateToApp(page1, '/vault/unlock');
             await page1.waitForURL(url => url.hash.includes('/vault/unlock'));
@@ -169,19 +171,20 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
             await page2.getByRole('button', { name: /unlock/i }).click();
             await page2.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
-            // Both should be on the home page / transaction list
+            // Both should be past the vault screens
             expect(page1.url()).not.toContain('/vault/');
             expect(page2.url()).not.toContain('/vault/');
 
-            // Navigate both to transaction list and verify same data
-            await navigateToApp(page1, '/transaction/list');
-            await navigateToApp(page2, '/transaction/list');
+            // Navigate both to transaction list (use hash change to preserve vault state)
+            await page1.evaluate(() => { window.location.hash = '#/transaction/list'; });
+            await page2.evaluate(() => { window.location.hash = '#/transaction/list'; });
+            await page1.waitForLoadState('networkidle');
+            await page2.waitForLoadState('networkidle');
 
             const content1 = await page1.textContent('body');
             const content2 = await page2.textContent('body');
 
             // If there are transactions, they should appear on both devices
-            // (We created one in the previous test)
             if (content1?.includes('42.50')) {
                 expect(content2).toContain('42.50');
             }

@@ -153,6 +153,10 @@ jobs:
             fi
             sleep 2
           done
+          # Pre-warm Vite's dependency optimizer to avoid 504 (Outdated Optimize Dep)
+          curl -sf http://localhost:8081 > /dev/null 2>&1
+          sleep 3
+          curl -sf http://localhost:8081 > /dev/null 2>&1
 
       - name: Run Playwright encryption E2E tests
         run: npx playwright test --reporter=list,junit
