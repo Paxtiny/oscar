@@ -37,7 +37,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Paxtiny/nicodaimus-crypto
-          path: ../nicodaimus-crypto
+          path: nicodaimus-crypto
+      - name: Symlink nicodaimus-crypto to parent dir (matches file:../nicodaimus-crypto)
+        run: ln -s "$GITHUB_WORKSPACE/nicodaimus-crypto" ../nicodaimus-crypto
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
