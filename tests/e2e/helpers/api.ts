@@ -145,7 +145,7 @@ export async function createAccount(
     opts: { name?: string; currency?: string } = {}
 ): Promise<{ accountId: string }> {
     const res = await request.post(`${API_BASE}/api/v1/accounts/add.json`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
         data: {
             name: opts.name || 'Test Checking',
             category: 1,       // Cash
@@ -175,7 +175,7 @@ export async function createCategory(
     opts: { name?: string } = {}
 ): Promise<{ categoryId: string }> {
     const res = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
         data: {
             name: opts.name || 'Test Expenses',
             type: 2,           // Expense category
@@ -202,7 +202,7 @@ export async function createTransaction(
     txData: Record<string, any>
 ): Promise<ApiResponse<any>> {
     const res = await request.post(`${API_BASE}/api/v1/transactions/add.json`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
         data: txData,
     });
 
