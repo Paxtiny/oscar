@@ -94,7 +94,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
 
         const now = Math.floor(Date.now() / 1000);
         const txResult = await createTransaction(page.request, loginResult.token, {
-            type: 2,  // Expense
+            type: 3,  // Expense (1=ModifyBalance, 2=Income, 3=Expense, 4=Transfer)
             categoryId: String(catResult.categoryId),   // Go json:",string" binding
             time: now,
             utcOffset: 60,

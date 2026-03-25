@@ -182,12 +182,12 @@ export async function createCategory(
         data: {
             categories: [{
                 name: opts.name || 'Test Expenses',
-                type: 2,           // Expense
+                type: 3,           // Expense (1=Income, 2=Transfer, 3=Expense)
                 icon: '1',
                 color: 'ef4444',
                 subCategories: [{
                     name: 'General',
-                    type: 2,
+                    type: 3,
                     icon: '1',
                     color: 'ef4444',
                 }],
@@ -200,17 +200,34 @@ export async function createCategory(
         throw new Error(`Category creation failed: ${JSON.stringify(data)}`);
     }
 
-    // Return the sub-category ID (first child of first parent)
-    const categories = data.result;
-    if (Array.isArray(categories) && categories.length > 0) {
-        const parent = categories[0];
+    // Response is map[categoryType][]category, e.g. { "2": [...], "3": [...] }
+    // Type 3 = Expense categories. Find the first sub-category.
+    const result = data.result;
+    const expenseCategories = result['3'] || result['2'] || Object.values(result)[0];
+
+    if (Array.isArray(expenseCategories) && expenseCategories.length > 0) {
+        const parent = expenseCategories[0];
         if (parent.subCategories && parent.subCategories.length > 0) {
             return { categoryId: parent.subCategories[0].id };
         }
-        return { categoryId: parent.id };
+        // Fallback: create a sub-category under this parent via single create
+        const subRes = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+            headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
+            data: {
+                name: 'General',
+                type: 3,
+                parentId: parent.id,
+                icon: '1',
+                color: 'ef4444',
+            },
+        });
+        const subData = (await subRes.json()) as ApiResponse<any>;
+        if (subData.success) {
+            return { categoryId: subData.result.id };
+        }
     }
 
-    throw new Error('No category returned from batch create');
+    throw new Error(`No category returned from batch create: ${JSON.stringify(result)}`);
 }
 
 /**
