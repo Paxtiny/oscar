@@ -182,7 +182,7 @@ export async function createCategory(
         data: {
             categories: [{
                 name: opts.name || 'Test Expenses',
-                type: 3,           // Expense (1=Income, 2=Transfer, 3=Expense)
+                type: 2,           // Expense category (1=Income, 2=Expense, 3=Transfer)
                 icon: '1',
                 color: 'ef4444',
                 subCategories: [{
@@ -203,7 +203,8 @@ export async function createCategory(
     // Response is map[categoryType][]category, e.g. { "2": [...], "3": [...] }
     // Type 3 = Expense categories. Find the first sub-category.
     const result = data.result;
-    const expenseCategories = result['3'] || result['2'] || Object.values(result)[0];
+    // Category types: 1=Income, 2=Expense, 3=Transfer
+    const expenseCategories = result['2'] || Object.values(result)[0];
 
     if (Array.isArray(expenseCategories) && expenseCategories.length > 0) {
         const parent = expenseCategories[0];
@@ -215,7 +216,7 @@ export async function createCategory(
             headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
             data: {
                 name: 'General',
-                type: 3,
+                type: 2,    // Expense category
                 parentId: parent.id,
                 icon: '1',
                 color: 'ef4444',
