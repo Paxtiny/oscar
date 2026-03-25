@@ -174,61 +174,42 @@ export async function createCategory(
     token: string,
     opts: { name?: string } = {}
 ): Promise<{ categoryId: string }> {
-    // ezBookkeeping uses two-level categories: primary -> sub-category.
-    // Transactions require a sub-category (not primary).
-    // Use batch create to make parent + child in one call.
-    const res = await request.post(`${API_BASE}/api/v1/transaction/categories/add_batch.json`, {
-        headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
+    const headers = { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' };
+
+    // Step 1: Create parent (primary) category
+    // Category types: 1=Income, 2=Expense, 3=Transfer
+    const parentRes = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+        headers,
         data: {
-            categories: [{
-                name: opts.name || 'Test Expenses',
-                type: 2,           // Expense category (1=Income, 2=Expense, 3=Transfer)
-                icon: '1',
-                color: 'ef4444',
-                subCategories: [{
-                    name: 'General',
-                    type: 3,
-                    icon: '1',
-                    color: 'ef4444',
-                }],
-            }],
+            name: opts.name || 'Test Expenses',
+            type: 2,
+            parentId: '0',
+            icon: '1',
+            color: 'ef4444',
         },
     });
-
-    const data = (await res.json()) as ApiResponse<any>;
-    if (!data.success) {
-        throw new Error(`Category creation failed: ${JSON.stringify(data)}`);
+    const parentData = (await parentRes.json()) as ApiResponse<any>;
+    if (!parentData.success) {
+        throw new Error(`Parent category failed: ${JSON.stringify(parentData)}`);
     }
 
-    // Response is map[categoryType][]category, e.g. { "2": [...], "3": [...] }
-    // Type 3 = Expense categories. Find the first sub-category.
-    const result = data.result;
-    // Category types: 1=Income, 2=Expense, 3=Transfer
-    const expenseCategories = result['2'] || Object.values(result)[0];
-
-    if (Array.isArray(expenseCategories) && expenseCategories.length > 0) {
-        const parent = expenseCategories[0];
-        if (parent.subCategories && parent.subCategories.length > 0) {
-            return { categoryId: parent.subCategories[0].id };
-        }
-        // Fallback: create a sub-category under this parent via single create
-        const subRes = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
-            headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
-            data: {
-                name: 'General',
-                type: 2,    // Expense category
-                parentId: parent.id,
-                icon: '1',
-                color: 'ef4444',
-            },
-        });
-        const subData = (await subRes.json()) as ApiResponse<any>;
-        if (subData.success) {
-            return { categoryId: subData.result.id };
-        }
+    // Step 2: Create sub-category (transactions require this, not primary)
+    const subRes = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+        headers,
+        data: {
+            name: 'General',
+            type: 2,
+            parentId: String(parentData.result.id),
+            icon: '1',
+            color: 'ef4444',
+        },
+    });
+    const subData = (await subRes.json()) as ApiResponse<any>;
+    if (!subData.success) {
+        throw new Error(`Sub-category failed: ${JSON.stringify(subData)}`);
     }
 
-    throw new Error(`No category returned from batch create: ${JSON.stringify(result)}`);
+    return { categoryId: subData.result.id };
 }
 
 /**
