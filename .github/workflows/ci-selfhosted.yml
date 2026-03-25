@@ -98,7 +98,7 @@ jobs:
 
       - name: Start oscar backend
         run: |
-          ./oscar-server &
+          ./oscar-server > /tmp/oscar-backend.log 2>&1 &
           echo "Waiting for oscar backend..."
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8080/api/v1/tokens/list.json > /dev/null 2>&1; then
@@ -107,17 +107,19 @@ jobs:
             fi
             sleep 2
           done
+          # Verify registration is enabled
+          curl -s http://localhost:8080/api/v1/server/settings.json | head -c 200
         env:
+          # Env vars follow OSCAR_<SECTION>_<KEY> pattern
           OSCAR_DATABASE_TYPE: postgres
           OSCAR_DATABASE_HOST: localhost
-          OSCAR_DATABASE_PORT: "5432"
           OSCAR_DATABASE_NAME: oscar_test
           OSCAR_DATABASE_USER: oscar
           OSCAR_DATABASE_PASSWD: oscar_test
-          OSCAR_HTTP_PORT: "8080"
-          OSCAR_ENABLE_USER_REGISTER: "true"
-          OSCAR_ENABLE_INTERNAL_AUTH: "true"
-          OSCAR_SECRET_KEY: e2e-test-secret-key-not-for-production
+          OSCAR_SERVER_PROTOCOL: http
+          OSCAR_SERVER_HTTP_PORT: "8080"
+          OSCAR_USER_ENABLE_REGISTER: "true"
+          OSCAR_SECURITY_SECRET_KEY: e2e-test-secret-key-not-for-production
 
       - name: Start frontend dev server
         run: |
@@ -157,6 +159,14 @@ jobs:
           name: e2e-screenshots-${{ github.run_id }}
           path: test-results/**/*.png
           retention-days: 7
+
+      - name: Dump backend logs on failure
+        if: failure()
+        run: |
+          echo "=== Oscar Backend Logs ==="
+          cat /tmp/oscar-backend.log 2>/dev/null | tail -100 || echo "No backend logs"
+          mkdir -p /opt/test-results/${{ github.run_id }}
+          cp /tmp/oscar-backend.log /opt/test-results/${{ github.run_id }}/backend.log 2>/dev/null || true
 
       - name: Cleanup backend
         if: always()
