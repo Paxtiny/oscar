@@ -2612,5 +2612,18 @@
     "Confirm Passphrase": "Confirm Passphrase",
     "Unlock": "Unlock",
     "Forgot your passphrase? All encrypted data is permanently unrecoverable by design.": "Forgot your passphrase? All encrypted data is permanently unrecoverable by design.",
-    "Encrypted field": "Encrypted field"
+    "Encrypted field": "Encrypted field",
+    "Budgets": "Budgets",
+    "Create Budget": "Create Budget",
+    "No budgets yet": "No budgets yet",
+    "Create a budget to start tracking your spending against targets.": "Create a budget to start tracking your spending against targets.",
+    "Budget Name": "Budget Name",
+    "e.g. Groceries, Transport": "e.g. Groceries, Transport",
+    "Monthly budget amount": "Monthly budget amount",
+    "Yearly": "Yearly",
+    "Rollover unused budget": "Rollover unused budget",
+    "Alert at 80% spent": "Alert at 80% spent",
+    "Budget created": "Budget created",
+    "Budget deleted": "Budget deleted",
+    "Name is required": "Name is required"
 }
