@@ -83,33 +83,41 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         // Navigate to add transaction (use hash change to preserve vault state)
         await navigateInApp(page, '/transaction/list');
 
-        // Look for the add transaction button (FAB or link)
+        // Click the "Add" button on the transaction list toolbar
+        // Use variant="outlined" to distinguish from other "Add" buttons
         const addButton = page.locator(
-            'a[href*="transaction/add"], button:has-text("Add"), .v-btn--fab, [aria-label*="add" i]'
+            'a[href*="transaction/add"], .v-btn--variant-outlined:has-text("Add"), .v-btn--fab, [aria-label*="add" i]'
         ).first();
 
         if (await addButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
             await addButton.click();
-            await page.waitForLoadState('networkidle');
 
-            // Fill in transaction details
-            const amountInput = page.locator(
+            // Wait for the edit dialog to appear (Vuetify v-dialog)
+            const dialog = page.locator('.v-dialog:visible').first();
+            await expect(dialog).toBeVisible({ timeout: 5_000 });
+
+            // Wait for any menu overlay to close (the Add button has a hover menu)
+            await page.waitForTimeout(500);
+
+            // Fill in transaction details WITHIN the dialog
+            const amountInput = dialog.locator(
                 'input[type="number"], input[inputmode="decimal"], input[placeholder*="amount" i]'
             ).first();
 
             if (await amountInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
                 await amountInput.fill('42.50');
 
-                const commentInput = page.locator(
+                const commentInput = dialog.locator(
                     'input[placeholder*="comment" i], input[placeholder*="note" i], textarea'
                 ).first();
                 if (await commentInput.isVisible({ timeout: 2_000 }).catch(() => false)) {
                     await commentInput.fill('E2E test transaction - encryption roundtrip');
                 }
 
-                const saveButton = page.getByRole('button', { name: /save|submit|add|confirm/i }).first();
+                // Find save button WITHIN the dialog (not the toolbar "Add" button)
+                const saveButton = dialog.getByRole('button', { name: /save|submit|add|confirm/i }).first();
                 if (await saveButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
-                    await saveButton.click();
+                    await saveButton.click({ force: true });
                     await page.waitForLoadState('networkidle');
                 }
             }
