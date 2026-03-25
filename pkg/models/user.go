@@ -120,7 +120,7 @@ type User struct {
 	VaultEncryptedDek     []byte `xorm:"BLOB"`
 	VaultEncryptedX25519  []byte `xorm:"BLOB"`
 	VaultX25519Public     []byte `xorm:"BLOB"`
-	AccountNumber         string `xorm:"VARCHAR(16) UNIQUE"`
+	AccountNumber         string `xorm:"VARCHAR(16)"`
 	NicodaimusKeyHash     string `xorm:"VARCHAR(64)"`
 	NicodaimusTier        string `xorm:"VARCHAR(20) NOT NULL DEFAULT 'free'"`
 	CreatedUnixTime       int64
