@@ -98,6 +98,7 @@ jobs:
 
       - name: Start oscar backend
         run: |
+          mkdir -p storage
           ./oscar-server server run > /tmp/oscar-backend.log 2>&1 &
           echo "Waiting for oscar backend..."
           for i in $(seq 1 30); do
