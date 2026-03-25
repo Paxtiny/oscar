@@ -60,9 +60,11 @@ test.describe('oscar.e2e.group-encryption', () => {
 
         const checkbox = page.locator('.v-checkbox input, input[type="checkbox"]').first();
         await checkbox.check({ force: true });
-        await page.waitForTimeout(500);
 
-        await page.getByRole('button', { name: /create vault/i }).click();
+        // Wait for zxcvbn to evaluate passphrase strength before clicking
+        const submitBtn = page.getByRole('button', { name: /create vault/i });
+        await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
+        await submitBtn.click();
         await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
     }
 

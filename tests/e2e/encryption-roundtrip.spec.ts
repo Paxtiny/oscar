@@ -44,9 +44,11 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
 
         const checkbox = page.locator('.v-checkbox input, input[type="checkbox"]').first();
         await checkbox.check({ force: true });
-        await page.waitForTimeout(500);
 
-        await page.getByRole('button', { name: /create vault/i }).click();
+        // Wait for zxcvbn to evaluate passphrase strength before clicking
+        const submitBtn = page.getByRole('button', { name: /create vault/i });
+        await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
+        await submitBtn.click();
         await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
     }
 
@@ -112,7 +114,13 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         await page.reload();
         await page.waitForLoadState('networkidle');
 
-        // If we ended up on vault unlock, re-unlock
+        // After reload, session is cleared - wait for router guard to redirect to vault unlock
+        // (the check must wait because Vue router guard runs after app mount)
+        await page.waitForURL(url =>
+            url.hash.includes('/vault/unlock') || !url.hash.includes('/vault/'),
+            { timeout: 10_000 }
+        ).catch(() => { /* may already be past vault */ });
+
         if (page.url().includes('/vault/unlock')) {
             await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
             await page.getByRole('button', { name: /unlock/i }).click();
@@ -136,10 +144,12 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         // Context 1: create data
         const ctx1 = await browser.newContext();
         const page1 = await ctx1.newPage();
+        attachDebugListeners(page1);
 
         // Context 2: read data
         const ctx2 = await browser.newContext();
         const page2 = await ctx2.newPage();
+        attachDebugListeners(page2);
 
         try {
             // Device 1: unlock and verify we can access the app
