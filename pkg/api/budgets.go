@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/Paxtiny/oscar/pkg/core"
 	"github.com/Paxtiny/oscar/pkg/errs"
 	"github.com/Paxtiny/oscar/pkg/log"
@@ -39,8 +41,12 @@ func (a *BudgetsApi) BudgetListHandler(c *core.WebContext) (any, *errs.Error) {
 
 	budgetResps := make([]*models.BudgetInfoResponse, len(budgets))
 	for i, budget := range budgets {
-		// TODO: calculate spent amount from transactions for this budget's period
-		spent := int64(0)
+		minTime, maxTime := getCurrentPeriodBounds(budget.Period)
+		spent, spentErr := a.transactions.GetExpenseAmountSumByCategory(c, uid, budget.CategoryId, budget.AccountId, minTime, maxTime)
+		if spentErr != nil {
+			log.Warnf(c, "[budgets.BudgetListHandler] failed to get spent amount for budget \"%d\", because %s", budget.BudgetId, spentErr.Error())
+			spent = 0
+		}
 		budgetResps[i] = budget.ToBudgetInfoResponse(spent)
 	}
 
@@ -168,4 +174,31 @@ func (a *BudgetsApi) BudgetDeleteHandler(c *core.WebContext) (any, *errs.Error) 
 	log.Infof(c, "[budgets.BudgetDeleteHandler] user \"uid:%d\" has deleted budget \"%d\"", uid, budgetDeleteReq.Id)
 
 	return true, nil
+}
+
+// getCurrentPeriodBounds returns the unix timestamps for the start and end of the current budget period
+func getCurrentPeriodBounds(period models.BudgetPeriod) (int64, int64) {
+	now := time.Now()
+	var start, end time.Time
+
+	switch period {
+	case models.BUDGET_PERIOD_WEEKLY:
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7 // Sunday = 7 (ISO)
+		}
+		start = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
+		end = start.AddDate(0, 0, 7).Add(-time.Second)
+	case models.BUDGET_PERIOD_MONTHLY:
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		end = start.AddDate(0, 1, 0).Add(-time.Second)
+	case models.BUDGET_PERIOD_YEARLY:
+		start = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+		end = start.AddDate(1, 0, 0).Add(-time.Second)
+	default:
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		end = start.AddDate(0, 1, 0).Add(-time.Second)
+	}
+
+	return start.Unix(), end.Unix()
 }
