@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 env:
-  OSCAR_TEST_URL: http://localhost:18080
+  OSCAR_TEST_URL: http://localhost:8081
 
 jobs:
   backend-tests:
@@ -95,12 +95,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Build frontend and copy to public/
-        run: |
-          npm run build
-          cp -r dist/* public/
-
-      # Build and run Go backend natively (serves built frontend + API)
+      # Build and run Go backend natively (API only, Vite serves frontend)
       - name: Build oscar backend
         run: CGO_ENABLED=1 go build -o oscar-server .
 
@@ -146,10 +141,23 @@ jobs:
           OSCAR_USER_ENABLE_REGISTER: "true"
           OSCAR_SECURITY_SECRET_KEY: e2e-test-secret-key-not-for-production
 
+      - name: Start Vite dev server (proxies API to backend on 18080)
+        run: |
+          # Redirect Vite's API proxy from default 8080 to our backend on 18080
+          sed -i 's|http://127.0.0.1:8080/|http://127.0.0.1:18080/|g' vite.config.ts
+          npm run serve > /tmp/vite-dev.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:8081 > /dev/null 2>&1; then
+              echo "Vite dev server is ready"
+              break
+            fi
+            sleep 2
+          done
+
       - name: Run Playwright encryption E2E tests
         run: npx playwright test --reporter=list,junit
         env:
-          OSCAR_TEST_URL: http://localhost:18080
+          OSCAR_TEST_URL: http://localhost:8081
           PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/playwright.xml
 
       - name: Save test results to Tower host for debugging
@@ -182,9 +190,11 @@ jobs:
           mkdir -p /opt/test-results/${{ github.run_id }}
           cp /tmp/oscar-backend.log /opt/test-results/${{ github.run_id }}/backend.log 2>/dev/null || true
 
-      - name: Cleanup backend
+      - name: Cleanup
         if: always()
-        run: pkill -f oscar-server || true
+        run: |
+          pkill -f oscar-server || true
+          pkill -f vite || true
 
   notify:
     runs-on: [self-hosted, tower]
