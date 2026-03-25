@@ -111,7 +111,7 @@ jobs:
           echo "Waiting for oscar backend..."
           READY=false
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:18080/server_settings.js 2>/dev/null | grep -q '"success"'; then
+            if curl -sf http://localhost:18080/server_settings.js > /dev/null 2>&1; then
               echo "Backend is ready"
               READY=true
               break
@@ -129,8 +129,8 @@ jobs:
             cat /tmp/oscar-backend.log
             exit 1
           fi
-          # Verify registration is enabled
-          curl -s http://localhost:18080/server_settings.js
+          # Verify backend responds and show settings
+          curl -sf http://localhost:18080/server_settings.js | head -c 500
         env:
           # Env vars follow OSCAR_<SECTION>_<KEY> pattern
           OSCAR_DATABASE_TYPE: postgres
