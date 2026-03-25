@@ -10,6 +10,8 @@ import { useStatisticsStore } from './statistics.ts';
 import { useExplorersStore } from '@/stores/explorer.ts';
 import { useExchangeRatesStore } from './exchangeRates.ts';
 
+import { encryptCreateRequest, encryptModifyRequest } from '@/lib/transaction-crypto.ts';
+
 import { type BeforeResolveFunction, itemAndIndex, entries, keys } from '@/core/base.ts';
 import { type TextualYearMonth, DateRange } from '@/core/datetime.ts';
 import { CategoryType } from '@/core/category.ts';
@@ -1049,9 +1051,11 @@ export const useTransactionsStore = defineStore('transactions', () => {
             }
 
             if (!isEdit) {
-                promise = services.addTransaction(transaction.toCreateRequest(clientSessionId));
+                const createReq = encryptCreateRequest(transaction.toCreateRequest(clientSessionId));
+                promise = services.addTransaction(createReq);
             } else {
-                promise = services.modifyTransaction(transaction.toModifyRequest());
+                const modifyReq = encryptModifyRequest(transaction.toModifyRequest());
+                promise = services.modifyTransaction(modifyReq);
             }
 
             promise.then(response => {
@@ -1315,7 +1319,7 @@ export const useTransactionsStore = defineStore('transactions', () => {
 
         if (transactions) {
             for (const transaction of transactions) {
-                const submitTransaction = transaction.toCreateRequest();
+                const submitTransaction = encryptCreateRequest(transaction.toCreateRequest());
                 submitTransactions.push(submitTransaction);
             }
         }

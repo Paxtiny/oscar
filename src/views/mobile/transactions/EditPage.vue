@@ -423,8 +423,8 @@
                 class="transaction-edit-comment"
                 style="height: auto"
                 :class="{ 'readonly': mode === TransactionEditPageMode.View }"
-                :label="tt('Description')"
-                :placeholder="mode !== TransactionEditPageMode.View ? tt('Your transaction description (optional)') : ''"
+                :label="tt('Comment')"
+                :placeholder="mode !== TransactionEditPageMode.View ? tt('Comment or note (optional)') : ''"
                 v-textarea-auto-size
                 v-model:value="transaction.comment"
             ></f7-list-input>
