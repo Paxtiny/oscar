@@ -48,7 +48,7 @@ export async function registerUser(
     const username = opts.username || uniqueUsername();
     const password = opts.password || 'TestPassword123!';
 
-    const res = await request.post(`${API_BASE}/api/v1/register.json`, {
+    const res = await request.post(`${API_BASE}/api/register.json`, {
         data: {
             username,
             password,
@@ -86,7 +86,7 @@ export async function loginUser(
     username: string,
     password: string
 ): Promise<{ token: string; hasVault: boolean }> {
-    const res = await request.post(`${API_BASE}/api/v1/authorize.json`, {
+    const res = await request.post(`${API_BASE}/api/authorize.json`, {
         data: { loginName: username, password },
     });
 
