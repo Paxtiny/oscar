@@ -8,6 +8,7 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 1 : 0,
     workers: 1, // sequential - vault state is per-user
+    timeout: 90_000, // Argon2id key derivation is intentionally slow (30s+ in CI)
     reporter: [
         ['list'],
         ['junit', { outputFile: 'test-results/playwright.xml' }],

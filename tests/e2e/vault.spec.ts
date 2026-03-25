@@ -69,16 +69,14 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
         const checkbox = page.locator('.v-checkbox input, input[type="checkbox"]').first();
         await checkbox.check({ force: true });
 
-        // Wait for strength check to settle
-        await page.waitForTimeout(500);
-
-        // Submit
+        // Wait for zxcvbn to evaluate passphrase strength
         const submitBtn = page.getByRole('button', { name: /create vault/i });
-        await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
-        await submitBtn.click();
+        await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
 
-        // Wait for vault init API call and redirect to home
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        // Click and wait for Argon2id key derivation + API call + redirect
+        // Argon2id is intentionally slow (64 MiB, 3 iterations) - can take 30s+ in CI
+        await submitBtn.click();
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
         // Verify vault state in localStorage
         const hasVault = await page.evaluate(() => localStorage.getItem('oscar_has_vault'));
@@ -103,7 +101,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
         await unlockBtn.click();
 
         // Should redirect to home after successful unlock
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
     });
 
     test('vault-unlock: wrong passphrase shows error', async ({ page }) => {
@@ -141,7 +139,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
         const passphraseInput = page.locator('input[type="password"]').first();
         await passphraseInput.fill(TEST_PASSPHRASE);
         await page.getByRole('button', { name: /unlock/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
         // Now navigate to vault settings / passphrase change
         // The change-passphrase flow: old passphrase -> new passphrase -> re-encrypt blobs
@@ -166,7 +164,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
         // TODO: Add passphrase change UI interaction when the settings page is built
         await passphraseInput.fill(TEST_PASSPHRASE);
         await page.getByRole('button', { name: /unlock/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
     });
 
     test('vault-multi-device: same passphrase works in second browser context', async ({ browser, request }) => {
@@ -186,7 +184,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
             await page1.waitForURL(url => url.hash.includes('/vault/unlock'));
             await page1.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
             await page1.getByRole('button', { name: /unlock/i }).click();
-            await page1.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+            await page1.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
             // Device 2: get a fresh token and unlock with same passphrase
             const loginResult2 = await loginUser(page2.request, username, password);
@@ -195,7 +193,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
             await page2.waitForURL(url => url.hash.includes('/vault/unlock'));
             await page2.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
             await page2.getByRole('button', { name: /unlock/i }).click();
-            await page2.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+            await page2.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
             // Both contexts should be on the home page
             expect(page1.url()).not.toContain('/vault/');
@@ -222,7 +220,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
         await checkbox.check({ force: true });
         await page.waitForTimeout(500);
         await page.getByRole('button', { name: /create vault/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
         // Verify vault params exist before shredding
         const paramsBefore = await getVaultParams(request, shredUser.token);
@@ -255,7 +253,7 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
 
         await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
         await page.getByRole('button', { name: /unlock/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
         // Simulate session timeout by clearing sessionStorage
         await page.evaluate(() => {

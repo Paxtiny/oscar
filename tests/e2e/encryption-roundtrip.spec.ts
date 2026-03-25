@@ -43,7 +43,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         await page.waitForTimeout(500);
 
         await page.getByRole('button', { name: /create vault/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
     }
 
     /**
@@ -57,7 +57,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
 
         await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
         await page.getByRole('button', { name: /unlock/i }).click();
-        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+        await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
     }
 
     test('roundtrip-single: create transaction, reload, verify fields match', async ({ page }) => {
@@ -112,7 +112,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         if (page.url().includes('/vault/unlock')) {
             await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
             await page.getByRole('button', { name: /unlock/i }).click();
-            await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+            await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
         }
 
         // Navigate to transaction list
@@ -144,7 +144,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
             await page1.waitForURL(url => url.hash.includes('/vault/unlock'));
             await page1.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
             await page1.getByRole('button', { name: /unlock/i }).click();
-            await page1.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+            await page1.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
             // Device 2: unlock with same passphrase on fresh context
             const loginResult2 = await loginUser(request, username, password);
@@ -153,7 +153,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
             await page2.waitForURL(url => url.hash.includes('/vault/unlock'));
             await page2.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
             await page2.getByRole('button', { name: /unlock/i }).click();
-            await page2.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 15_000 });
+            await page2.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
 
             // Both should be on the home page / transaction list
             expect(page1.url()).not.toContain('/vault/');
