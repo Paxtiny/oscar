@@ -6,7 +6,7 @@
 
 import type { APIRequestContext } from '@playwright/test';
 
-const API_BASE = process.env.OSCAR_TEST_URL || 'http://localhost:8081';
+const API_BASE = process.env.OSCAR_TEST_URL || 'http://localhost:18080';
 
 interface AuthResponse {
     success: boolean;

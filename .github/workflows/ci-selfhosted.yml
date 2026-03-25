@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 env:
-  OSCAR_TEST_URL: http://localhost:8081
+  OSCAR_TEST_URL: http://localhost:18080
 
 jobs:
   backend-tests:
@@ -92,7 +92,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      # Build and run Go backend natively (not Docker - avoids crypto dep issue)
+      - name: Build frontend
+        run: npm run build
+
+      # Build and run Go backend natively (serves built frontend + API)
       - name: Build oscar backend
         run: CGO_ENABLED=1 go build -o oscar-server .
 
@@ -103,7 +106,7 @@ jobs:
           echo "Waiting for oscar backend..."
           READY=false
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:8080/api/v1/server/settings.json 2>/dev/null | grep -q '"success"'; then
+            if curl -sf http://localhost:18080/api/v1/server/settings.json 2>/dev/null | grep -q '"success"'; then
               echo "Backend is ready"
               READY=true
               break
@@ -122,7 +125,7 @@ jobs:
             exit 1
           fi
           # Verify registration is enabled
-          curl -s http://localhost:8080/api/v1/server/settings.json
+          curl -s http://localhost:18080/api/v1/server/settings.json
         env:
           # Env vars follow OSCAR_<SECTION>_<KEY> pattern
           OSCAR_DATABASE_TYPE: postgres
@@ -132,25 +135,14 @@ jobs:
           OSCAR_DATABASE_PASSWD: oscar_test
           OSCAR_DATABASE_SSL_MODE: disable
           OSCAR_SERVER_PROTOCOL: http
-          OSCAR_SERVER_HTTP_PORT: "8080"
+          OSCAR_SERVER_HTTP_PORT: "18080"
           OSCAR_USER_ENABLE_REGISTER: "true"
           OSCAR_SECURITY_SECRET_KEY: e2e-test-secret-key-not-for-production
-
-      - name: Start frontend dev server
-        run: |
-          npm run serve &
-          for i in $(seq 1 20); do
-            if curl -sf http://localhost:8081 > /dev/null 2>&1; then
-              echo "Frontend dev server is ready"
-              break
-            fi
-            sleep 2
-          done
 
       - name: Run Playwright encryption E2E tests
         run: npx playwright test --reporter=list,junit
         env:
-          OSCAR_TEST_URL: http://localhost:8081
+          OSCAR_TEST_URL: http://localhost:18080
           PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/playwright.xml
 
       - name: Save test results to Tower host for debugging
