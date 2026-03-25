@@ -463,6 +463,35 @@ func (s *TransactionService) GetTransactionCount(c core.Context, uid int64, maxT
 	return sess.Count(&models.Transaction{})
 }
 
+// GetExpenseAmountSumByCategory returns total expense amount for a category (or all categories if 0) within a time range
+func (s *TransactionService) GetExpenseAmountSumByCategory(c core.Context, uid int64, categoryId int64, accountId int64, minTime int64, maxTime int64) (int64, error) {
+	if uid <= 0 {
+		return 0, errs.ErrUserIdInvalid
+	}
+
+	sess := s.UserDataDB(uid).NewSession(c).
+		Where("uid=? AND deleted=? AND type=?", uid, false, models.TRANSACTION_DB_TYPE_EXPENSE)
+
+	if categoryId > 0 {
+		sess = sess.And("category_id=?", categoryId)
+	}
+
+	if accountId > 0 {
+		sess = sess.And("account_id=?", accountId)
+	}
+
+	if minTime > 0 {
+		sess = sess.And("transaction_time>=?", minTime)
+	}
+
+	if maxTime > 0 {
+		sess = sess.And("transaction_time<=?", maxTime)
+	}
+
+	total, err := sess.SumInt(&models.Transaction{}, "amount")
+	return total, err
+}
+
 // CreateTransaction saves a new transaction to database
 func (s *TransactionService) CreateTransaction(c core.Context, transaction *models.Transaction, tagIds []int64, pictureIds []int64) error {
 	if transaction.Uid <= 0 {
