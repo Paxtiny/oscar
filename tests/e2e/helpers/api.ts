@@ -136,6 +136,63 @@ export async function shredVault(
 }
 
 /**
+ * Create a bank account for the user (requires auth token).
+ * Returns the account ID needed for creating transactions.
+ */
+export async function createAccount(
+    request: APIRequestContext,
+    token: string,
+    opts: { name?: string; currency?: string } = {}
+): Promise<{ accountId: string }> {
+    const res = await request.post(`${API_BASE}/api/v1/accounts/add.json`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            name: opts.name || 'Test Checking',
+            category: 1,       // Cash
+            type: 1,           // Single account
+            icon: 1,
+            color: '7C3AED',
+            currency: opts.currency || 'EUR',
+            balance: 0,
+        },
+    });
+
+    const data = (await res.json()) as ApiResponse<any>;
+    if (!data.success) {
+        throw new Error(`Account creation failed: ${JSON.stringify(data)}`);
+    }
+
+    return { accountId: data.result.id };
+}
+
+/**
+ * Create an expense category for the user (requires auth token).
+ * Returns the category ID needed for creating transactions.
+ */
+export async function createCategory(
+    request: APIRequestContext,
+    token: string,
+    opts: { name?: string } = {}
+): Promise<{ categoryId: string }> {
+    const res = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            name: opts.name || 'Test Expenses',
+            type: 2,           // Expense category
+            icon: 1,
+            color: 'ef4444',
+        },
+    });
+
+    const data = (await res.json()) as ApiResponse<any>;
+    if (!data.success) {
+        throw new Error(`Category creation failed: ${JSON.stringify(data)}`);
+    }
+
+    return { categoryId: data.result.id };
+}
+
+/**
  * Create a transaction via API (requires auth token).
  * The transaction data should already be encrypted by the caller.
  */
