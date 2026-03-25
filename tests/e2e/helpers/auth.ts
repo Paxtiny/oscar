@@ -48,3 +48,18 @@ export async function navigateToApp(page: Page, hash = '/'): Promise<void> {
     await page.goto(`/#${hash}`);
     await page.waitForLoadState('networkidle');
 }
+
+/**
+ * Attach console and error listeners to a page for CI debugging.
+ * Call once per page/context at test start.
+ */
+export function attachDebugListeners(page: Page): void {
+    page.on('console', msg => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+            console.log(`[browser ${msg.type()}] ${msg.text()}`);
+        }
+    });
+    page.on('pageerror', err => {
+        console.log(`[browser CRASH] ${err.message}`);
+    });
+}

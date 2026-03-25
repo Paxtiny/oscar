@@ -11,7 +11,7 @@
 
 import { test, expect } from '@playwright/test';
 import { registerUser, loginUser } from './helpers/api';
-import { injectAuthState, clearAuthState, navigateToApp } from './helpers/auth';
+import { injectAuthState, clearAuthState, navigateToApp, attachDebugListeners } from './helpers/auth';
 
 const ADMIN_PASSPHRASE = 'AdminGroupTest-Secure-Pass-88!';
 const MEMBER_PASSPHRASE = 'MemberGroupTest-Secure-Pass-77!';
@@ -36,6 +36,10 @@ test.describe('oscar.e2e.group-encryption', () => {
         memberToken = member.token;
         memberUsername = member.username;
         memberPassword = member.password;
+    });
+
+    test.beforeEach(async ({ page }) => {
+        attachDebugListeners(page);
     });
 
     /**

@@ -9,6 +9,7 @@ import {
     type VaultParamsDTO
 } from '@/lib/vault-service.ts';
 
+import { setStoredHasVault } from '@/lib/userstate.ts';
 import logger from '@/lib/logger.ts';
 import services from '@/lib/services.ts';
 
@@ -37,6 +38,7 @@ export const useVaultStore = defineStore('vault', () => {
         }
 
         hasVault.value = true;
+        setStoredHasVault(true);
         logger.info('Vault initialized');
     }
 
@@ -78,6 +80,7 @@ export const useVaultStore = defineStore('vault', () => {
     function resetVaultState(): void {
         lockVaultService();
         hasVault.value = false;
+        setStoredHasVault(false);
         tier.value = 'free';
         accountBalances.value = new Map();
     }

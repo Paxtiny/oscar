@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 import { registerUser, loginUser, getVaultParams, shredVault } from './helpers/api';
-import { injectAuthState, clearAuthState, navigateToApp } from './helpers/auth';
+import { injectAuthState, clearAuthState, navigateToApp, attachDebugListeners } from './helpers/auth';
 
 const TEST_PASSPHRASE = 'CorrectHorse-Battery-Staple-42!';
 const WRONG_PASSPHRASE = 'WrongPassphrase-Does-Not-Match';
@@ -27,6 +27,10 @@ test.describe('oscar.e2e.vault-lifecycle', () => {
         token = user.token;
         username = user.username;
         password = user.password;
+    });
+
+    test.beforeEach(async ({ page }) => {
+        attachDebugListeners(page);
     });
 
     test('vault-creation: new user is redirected to vault setup', async ({ page }) => {

@@ -10,7 +10,7 @@
 
 import { test, expect } from '@playwright/test';
 import { registerUser, loginUser } from './helpers/api';
-import { injectAuthState, navigateToApp } from './helpers/auth';
+import { injectAuthState, navigateToApp, attachDebugListeners } from './helpers/auth';
 
 const TEST_PASSPHRASE = 'RoundtripTest-Encrypt-Decrypt-55!';
 
@@ -24,6 +24,10 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         token = user.token;
         username = user.username;
         password = user.password;
+    });
+
+    test.beforeEach(async ({ page }) => {
+        attachDebugListeners(page);
     });
 
     /**
