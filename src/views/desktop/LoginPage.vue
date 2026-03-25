@@ -7,16 +7,30 @@
             </div>
         </router-link>
         <v-row no-gutters class="auth-wrapper">
-            <v-col cols="12" md="8" class="auth-image-background d-none d-md-flex align-center justify-center position-relative">
-                <div class="d-flex auth-img-footer" v-if="!isDarkMode">
-                    <v-img class="img-with-direction" src="img/desktop/background.svg"/>
-                </div>
-                <div class="d-flex auth-img-footer" v-if="isDarkMode">
-                    <v-img class="img-with-direction" src="img/desktop/background-dark.svg"/>
-                </div>
-                <div class="d-flex align-center justify-center w-100 pt-10">
-                    <v-img class="img-with-direction" max-width="600px" src="img/desktop/people1.svg" v-if="!isDarkMode"/>
-                    <v-img class="img-with-direction" max-width="600px" src="img/desktop/people1-dark.svg" v-else-if="isDarkMode"/>
+            <v-col cols="12" md="8" class="d-none d-md-flex align-center justify-center position-relative"
+                   :style="{ background: isDarkMode ? 'linear-gradient(135deg, #0f0d13 0%, #1a1028 50%, #0f0d13 100%)' : 'linear-gradient(135deg, #f3f0ff 0%, #ede5ff 50%, #f8f7fa 100%)' }">
+                <div class="d-flex flex-column align-center justify-center text-center px-12" style="max-width: 600px;">
+                    <v-icon :icon="mdiShieldLock" size="80" color="primary" class="mb-6" />
+                    <h2 class="text-h3 font-weight-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-on-background'">
+                        {{ tt('Your finances, your eyes only') }}
+                    </h2>
+                    <p class="text-body-1 mb-8" :class="isDarkMode ? 'text-grey-400' : 'text-medium-emphasis'">
+                        {{ tt('End-to-end encrypted expense tracking. Not even we can read your data.') }}
+                    </p>
+                    <div class="d-flex flex-column ga-4 w-100" style="max-width: 400px;">
+                        <div class="d-flex align-center ga-3">
+                            <v-icon :icon="mdiLock" size="24" color="primary" />
+                            <span class="text-body-2">{{ tt('Zero-knowledge encryption') }}</span>
+                        </div>
+                        <div class="d-flex align-center ga-3">
+                            <v-icon :icon="mdiEyeOff" size="24" color="primary" />
+                            <span class="text-body-2">{{ tt('No personal data required') }}</span>
+                        </div>
+                        <div class="d-flex align-center ga-3">
+                            <v-icon :icon="mdiCloudLock" size="24" color="primary" />
+                            <span class="text-body-2">{{ tt('Bring your own storage') }}</span>
+                        </div>
+                    </div>
                 </div>
             </v-col>
             <v-col cols="12" md="4" class="auth-card d-flex flex-column">
@@ -199,7 +213,11 @@ import {
 
 import {
     mdiOnepassword,
-    mdiHelpCircleOutline
+    mdiHelpCircleOutline,
+    mdiShieldLock,
+    mdiLock,
+    mdiEyeOff,
+    mdiCloudLock
 } from '@mdi/js';
 
 type SnackBarType = InstanceType<typeof SnackBar>;
