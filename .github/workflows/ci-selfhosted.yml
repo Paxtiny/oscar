@@ -113,10 +113,11 @@ jobs:
         env:
           # Env vars follow OSCAR_<SECTION>_<KEY> pattern
           OSCAR_DATABASE_TYPE: postgres
-          OSCAR_DATABASE_HOST: localhost
+          OSCAR_DATABASE_HOST: "localhost:5432"
           OSCAR_DATABASE_NAME: oscar_test
           OSCAR_DATABASE_USER: oscar
           OSCAR_DATABASE_PASSWD: oscar_test
+          OSCAR_DATABASE_SSL_MODE: disable
           OSCAR_SERVER_PROTOCOL: http
           OSCAR_SERVER_HTTP_PORT: "8080"
           OSCAR_USER_ENABLE_REGISTER: "true"
