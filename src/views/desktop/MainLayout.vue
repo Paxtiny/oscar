@@ -56,6 +56,12 @@
                         <span class="nav-item-title">{{ tt('Budgets') }}</span>
                     </router-link>
                 </li>
+                <li class="nav-link">
+                    <router-link to="/savings/list">
+                        <v-icon class="nav-item-icon" :icon="mdiPiggyBankOutline"/>
+                        <span class="nav-item-title">{{ tt('Savings Goals') }}</span>
+                    </router-link>
+                </li>
                 <li class="nav-section-title">
                     <div class="title-wrapper">
                         <span class="title-text">{{ tt('Basis Data') }}</span>
@@ -245,6 +251,7 @@ import {
     mdiChartPieOutline,
     mdiCompassOutline,
     mdiChartBoxOutline,
+    mdiPiggyBankOutline,
     mdiSwapHorizontal,
     mdiCogOutline,
     mdiCellphone,

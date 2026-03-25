@@ -35,6 +35,7 @@ import UserSettingsPage from '@/views/desktop/user/UserSettingsPage.vue';
 import AppSettingsPage from '@/views/desktop/app/AppSettingsPage.vue';
 
 import BudgetListPage from '@/views/desktop/budgets/ListPage.vue';
+import SavingsGoalListPage from '@/views/desktop/savings/ListPage.vue';
 
 import ExchangeRatesListPage from '@/views/desktop/exchangerates/ListPage.vue';
 import AboutPage from '@/views/desktop/AboutPage.vue';
@@ -239,6 +240,11 @@ const router = createRouter({
                 {
                     path: '/budget/list',
                     component: BudgetListPage,
+                    beforeEnter: checkLogin
+                },
+                {
+                    path: '/savings/list',
+                    component: SavingsGoalListPage,
                     beforeEnter: checkLogin
                 },
                 {

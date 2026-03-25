@@ -46,6 +46,7 @@ const (
 	NormalSubcategoryInsightsExplorer       = 18
 	NormalSubcategoryTagGroup               = 19
 	NormalSubcategoryBudget                 = 20
+	NormalSubcategorySavingsGoal            = 21
 )
 
 // Error represents the specific error returned to user

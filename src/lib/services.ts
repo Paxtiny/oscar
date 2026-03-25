@@ -531,6 +531,22 @@ export default {
     deleteBudget: (req: { id: string }): ApiResponsePromise<boolean> => {
         return axios.post<ApiResponse<boolean>>('v1/budgets/delete.json', req);
     },
+    // Savings Goals
+    getSavingsGoals: (): ApiResponsePromise<any[]> => {
+        return axios.get<ApiResponse<any[]>>('v1/savings-goals/list.json');
+    },
+    createSavingsGoal: (req: any): ApiResponsePromise<any> => {
+        return axios.post<ApiResponse<any>>('v1/savings-goals/add.json', req);
+    },
+    modifySavingsGoal: (req: any): ApiResponsePromise<any> => {
+        return axios.post<ApiResponse<any>>('v1/savings-goals/modify.json', req);
+    },
+    contributeSavingsGoal: (req: { id: string; amount: number }): ApiResponsePromise<any> => {
+        return axios.post<ApiResponse<any>>('v1/savings-goals/contribute.json', req);
+    },
+    deleteSavingsGoal: (req: { id: string }): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/savings-goals/delete.json', req);
+    },
     getTransactions: (req: TransactionListByMaxTimeRequest): ApiResponsePromise<TransactionInfoPageWrapperResponse> => {
         const tagFilter = encodeURIComponent(req.tagFilter);
         const amountFilter = encodeURIComponent(req.amountFilter);
