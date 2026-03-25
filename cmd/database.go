@@ -189,5 +189,13 @@ func updateAllDatabaseTablesStructure(c *core.CliContext) error {
 
 	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] savings goal table maintained successfully")
 
+	err = datastore.Container.UserStore.SyncStructs(new(models.UserStorageConfig))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] user storage config table maintained successfully")
+
 	return nil
 }
