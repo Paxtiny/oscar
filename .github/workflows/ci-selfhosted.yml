@@ -98,18 +98,31 @@ jobs:
 
       - name: Start oscar backend
         run: |
-          mkdir -p storage
+          mkdir -p storage log
           ./oscar-server server run > /tmp/oscar-backend.log 2>&1 &
           echo "Waiting for oscar backend..."
+          READY=false
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:8080/api/v1/tokens/list.json > /dev/null 2>&1; then
+            if curl -sf http://localhost:8080/api/v1/server/settings.json 2>/dev/null | grep -q '"success"'; then
               echo "Backend is ready"
+              READY=true
               break
+            fi
+            # Check if process died
+            if ! kill -0 $! 2>/dev/null; then
+              echo "Backend process died!"
+              cat /tmp/oscar-backend.log
+              exit 1
             fi
             sleep 2
           done
+          if [ "$READY" != "true" ]; then
+            echo "Backend failed to start within 60s"
+            cat /tmp/oscar-backend.log
+            exit 1
+          fi
           # Verify registration is enabled
-          curl -s http://localhost:8080/api/v1/server/settings.json | head -c 200
+          curl -s http://localhost:8080/api/v1/server/settings.json
         env:
           # Env vars follow OSCAR_<SECTION>_<KEY> pattern
           OSCAR_DATABASE_TYPE: postgres
