@@ -95,8 +95,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Build frontend
-        run: npm run build
+      - name: Build frontend and copy to public/
+        run: |
+          npm run build
+          cp -r dist/* public/
 
       # Build and run Go backend natively (serves built frontend + API)
       - name: Build oscar backend
