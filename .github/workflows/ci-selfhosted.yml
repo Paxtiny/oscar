@@ -136,12 +136,11 @@ jobs:
           OSCAR_TEST_URL: http://localhost:8081
           PLAYWRIGHT_JUNIT_OUTPUT_FILE: test-results/playwright.xml
 
-      - name: Print test results on failure
-        if: failure()
+      - name: Save test results to Tower host for debugging
+        if: always()
         run: |
-          echo "=== Playwright Test Results ==="
-          cat test-results/playwright.xml 2>/dev/null || echo "No JUnit XML found"
-          echo "=== End Results ==="
+          mkdir -p /opt/test-results/${{ github.run_id }}
+          cp -r test-results/ /opt/test-results/${{ github.run_id }}/ 2>/dev/null || true
 
       - name: Upload Playwright results
         uses: actions/upload-artifact@v4
