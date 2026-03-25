@@ -150,7 +150,7 @@ export async function createAccount(
             name: opts.name || 'Test Checking',
             category: 1,       // Cash
             type: 1,           // Single account
-            icon: 1,
+            icon: '1',         // string (Go binding: json:"icon,string")
             color: '7C3AED',
             currency: opts.currency || 'EUR',
             balance: 0,
@@ -179,7 +179,7 @@ export async function createCategory(
         data: {
             name: opts.name || 'Test Expenses',
             type: 2,           // Expense category
-            icon: 1,
+            icon: '1',         // string (Go binding: json:"icon,string")
             color: 'ef4444',
         },
     });
