@@ -126,7 +126,7 @@ jobs:
         env:
           # Env vars follow OSCAR_<SECTION>_<KEY> pattern
           OSCAR_DATABASE_TYPE: postgres
-          OSCAR_DATABASE_HOST: "localhost:5432"
+          OSCAR_DATABASE_HOST: "127.0.0.1:5432"
           OSCAR_DATABASE_NAME: oscar_test
           OSCAR_DATABASE_USER: oscar
           OSCAR_DATABASE_PASSWD: oscar_test
