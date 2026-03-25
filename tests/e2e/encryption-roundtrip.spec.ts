@@ -95,15 +95,18 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         const now = Math.floor(Date.now() / 1000);
         const txResult = await createTransaction(page.request, loginResult.token, {
             type: 2,  // Expense
-            categoryId: catResult.categoryId,
+            categoryId: String(catResult.categoryId),   // Go json:",string" binding
             time: now,
             utcOffset: 60,
-            sourceAccountId: accResult.accountId,
+            sourceAccountId: String(accResult.accountId), // Go json:",string" binding
             sourceAmount: 4250,  // 42.50 in cents
             comment: 'E2E roundtrip test',
         });
 
         // Verify transaction was actually created
+        if (!txResult.success) {
+            console.error('Transaction creation failed:', JSON.stringify(txResult));
+        }
         expect(txResult.success).toBe(true);
 
         // Full page reload to force re-fetch from server (tests decryption roundtrip)
