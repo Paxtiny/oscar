@@ -93,7 +93,7 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         const catResult = await createCategory(page.request, loginResult.token, { name: 'Roundtrip Expenses' });
 
         const now = Math.floor(Date.now() / 1000);
-        await createTransaction(page.request, loginResult.token, {
+        const txResult = await createTransaction(page.request, loginResult.token, {
             type: 2,  // Expense
             categoryId: catResult.categoryId,
             time: now,
@@ -103,10 +103,25 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
             comment: 'E2E roundtrip test',
         });
 
-        // Navigate to transaction list (use hash change to preserve vault state)
-        await navigateInApp(page, '/transaction/list');
+        // Verify transaction was actually created
+        expect(txResult.success).toBe(true);
+
+        // Full page reload to force re-fetch from server (tests decryption roundtrip)
+        await page.reload();
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(1_000);
+
+        // After reload, vault state is cleared - need to unlock again
+        if (page.url().includes('/vault/unlock')) {
+            await page.locator('input[type="password"]').first().fill(TEST_PASSPHRASE);
+            await page.getByRole('button', { name: /unlock/i }).click();
+            await page.waitForURL(url => !url.hash.includes('/vault/'), { timeout: 60_000 });
+        }
+
+        // Navigate to transaction list
+        await navigateInApp(page, '/transaction/list');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2_000);
 
         // Verify the transaction amount is visible (decrypted from server)
         const pageContent = await page.textContent('body');
