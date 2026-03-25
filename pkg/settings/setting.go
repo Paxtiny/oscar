@@ -374,6 +374,9 @@ type Config struct {
 	MaxFailuresPerIpPerMinute             uint32
 	MaxFailuresPerUserPerMinute           uint32
 
+	// nicodAImus
+	NicodaimusApiUrl string
+
 	// Auth
 	EnableInternalAuth                bool
 	EnableOAuth2Login                 bool
@@ -539,6 +542,12 @@ func LoadConfiguration(configFilePath string) (*Config, error) {
 	}
 
 	err = loadSecurityConfiguration(config, cfgFile, "security")
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = loadNicodaimusConfiguration(config, cfgFile, "nicodaimus")
 
 	if err != nil {
 		return nil, err
@@ -1014,6 +1023,11 @@ func loadSecurityConfiguration(config *Config, configFile *ini.File, sectionName
 	config.MaxFailuresPerIpPerMinute = getConfigItemUint32Value(configFile, sectionName, "max_failures_per_ip_per_minute", defaultMaxFailuresPerIpPerMinute)
 	config.MaxFailuresPerUserPerMinute = getConfigItemUint32Value(configFile, sectionName, "max_failures_per_user_per_minute", defaultMaxFailuresPerUserPerMinute)
 
+	return nil
+}
+
+func loadNicodaimusConfiguration(config *Config, configFile *ini.File, sectionName string) error {
+	config.NicodaimusApiUrl = getConfigItemStringValue(configFile, sectionName, "api_url")
 	return nil
 }
 

@@ -146,6 +146,45 @@ export const useRootStore = defineStore('root', () => {
         });
     }
 
+    function authorizeByAccount(req: { accountNumber: string }): Promise<AuthResponse> {
+        return new Promise((resolve, reject) => {
+            services.authorizeByAccount(req).then(response => {
+                const data = response.data;
+
+                if (!data || !data.success || !data.result || !data.result.token) {
+                    reject({ message: 'Unable to log in' });
+                    return;
+                }
+
+                settingsStore.setApplicationSettingsFromCloudSettings(data.result.applicationCloudSettings);
+                updateCurrentToken(data.result.token);
+
+                if (data.result.hasVault !== undefined) {
+                    setStoredHasVault(data.result.hasVault);
+                }
+                if (data.result.tier) {
+                    setStoredTier(data.result.tier);
+                }
+
+                if (data.result.user && isObject(data.result.user)) {
+                    userStore.storeUserBasicInfo(data.result.user);
+                }
+
+                resolve(data.result);
+            }).catch(error => {
+                logger.error('failed to login by account', error);
+
+                if (error && error.processed) {
+                    reject(error);
+                } else if (error.response && error.response.data && error.response.data.errorMessage) {
+                    reject({ error: error.response.data });
+                } else {
+                    reject({ message: 'Unable to log in' });
+                }
+            });
+        });
+    }
+
     function authorize2FA({ token, passcode, recoveryCode }: { token: string, passcode: string | null, recoveryCode: string | null }): Promise<AuthResponse> {
         return new Promise((resolve, reject) => {
             let promise: ApiResponsePromise<AuthResponse>;
@@ -673,6 +712,7 @@ export const useRootStore = defineStore('root', () => {
         generateOAuth2LoginUrl,
         generateOAuth2LinkUrl,
         authorize,
+        authorizeByAccount,
         authorize2FA,
         authorizeOAuth2,
         register,

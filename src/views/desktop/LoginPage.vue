@@ -38,14 +38,50 @@
                     <v-card variant="flat" class="w-100 mt-0 px-4 pt-12" max-width="500">
                         <v-card-text>
                             <h4 class="text-h4 mb-2">{{ tt('Welcome to oscar') }}</h4>
-                            <p class="mb-0" v-if="isInternalAuthEnabled()">{{ tt('Please log in with your oscar account') }}</p>
+                            <p class="mb-0" v-if="isNicodaimusAuthEnabled()">{{ tt('Enter your nicodAImus account number') }}</p>
+                            <p class="mb-0" v-else-if="isInternalAuthEnabled()">{{ tt('Please log in with your oscar account') }}</p>
                             <p class="mt-1 mb-0" v-if="tips">{{ tips }}</p>
                         </v-card-text>
 
                         <v-card-text class="pb-0 mb-6">
                             <v-form>
                                 <v-row>
-                                    <v-col cols="12" v-if="isInternalAuthEnabled()">
+                                    <!-- nicodAImus 16-digit account number login -->
+                                    <v-col cols="12" v-if="isNicodaimusAuthEnabled()">
+                                        <v-text-field
+                                            type="text"
+                                            autocomplete="on"
+                                            inputmode="numeric"
+                                            maxlength="19"
+                                            :autofocus="true"
+                                            :disabled="loggingInByAccount"
+                                            :label="tt('Account Number')"
+                                            :placeholder="tt('1234 5678 9012 3456')"
+                                            v-model="accountNumberDisplay"
+                                            @input="onAccountInput"
+                                            @keyup.enter="loginByAccount"
+                                        />
+                                    </v-col>
+
+                                    <v-col cols="12" v-if="isNicodaimusAuthEnabled()">
+                                        <v-btn block color="primary"
+                                               :disabled="!accountNumberValid || loggingInByAccount"
+                                               @click="loginByAccount">
+                                            {{ tt('Log In') }}
+                                            <v-progress-circular indeterminate size="22" class="ms-2" v-if="loggingInByAccount"></v-progress-circular>
+                                        </v-btn>
+                                    </v-col>
+
+                                    <v-col cols="12" class="text-center" v-if="isNicodaimusAuthEnabled()">
+                                        <span class="me-1">{{ tt('Don\'t have an account?') }}</span>
+                                        <a class="text-primary" href="https://nicodaimus.com/account/create/" target="_blank"
+                                           :class="{ 'disabled': loggingInByAccount }">
+                                            {{ tt('Create an account') }}
+                                        </a>
+                                    </v-col>
+
+                                    <!-- Legacy username+password login (for self-hosters) -->
+                                    <v-col cols="12" v-if="!isNicodaimusAuthEnabled() && isInternalAuthEnabled()">
                                         <v-text-field
                                             type="text"
                                             autocomplete="username"
@@ -63,7 +99,7 @@
                                         />
                                     </v-col>
 
-                                    <v-col cols="12" v-if="isInternalAuthEnabled()">
+                                    <v-col cols="12" v-if="!isNicodaimusAuthEnabled() && isInternalAuthEnabled()">
                                         <v-text-field
                                             autocomplete="current-password"
                                             ref="passwordInput"
@@ -104,7 +140,7 @@
                                         />
                                     </v-col>
 
-                                    <v-col cols="12" class="py-0 mt-1 mb-4">
+                                    <v-col cols="12" class="py-0 mt-1 mb-4" v-if="!isNicodaimusAuthEnabled()">
                                         <div class="d-flex align-center justify-space-between flex-wrap">
                                             <a href="javascript:void(0);"
                                                :class="{ 'disabled': loggingInByPassword || loggingInByOAuth2 || verifying }"
@@ -119,7 +155,7 @@
                                         </div>
                                     </v-col>
 
-                                    <v-col cols="12">
+                                    <v-col cols="12" v-if="!isNicodaimusAuthEnabled()">
                                         <v-btn block :disabled="inputIsEmpty || loggingInByPassword || loggingInByOAuth2 || verifying"
                                                @click="login" v-if="isInternalAuthEnabled() && !show2faInput">
                                             {{ tt('Log In') }}
@@ -204,12 +240,15 @@ import { KnownErrorCode } from '@/consts/api.ts';
 
 import { generateRandomUUID } from '@/lib/misc.ts';
 import {
+    isNicodaimusAuthEnabled,
     isUserRegistrationEnabled,
     isUserForgetPasswordEnabled,
     isUserVerifyEmailEnabled,
     isInternalAuthEnabled,
     isOAuth2Enabled
 } from '@/lib/server_settings.ts';
+
+import { formatAccount16, digits16 } from '@/lib/account-number.ts';
 
 import {
     mdiOnepassword,
@@ -255,6 +294,35 @@ const snackbar = useTemplateRef<SnackBarType>('snackbar');
 
 const show2faInput = ref<boolean>(false);
 const showMobileQrCode = ref<boolean>(false);
+
+// nicodAImus account number login state
+const accountNumberDisplay = ref<string>('');
+const loggingInByAccount = ref<boolean>(false);
+const accountNumberValid = computed<boolean>(() => digits16(accountNumberDisplay.value) !== null);
+
+function onAccountInput(): void {
+    accountNumberDisplay.value = formatAccount16(accountNumberDisplay.value);
+}
+
+function loginByAccount(): void {
+    const account = digits16(accountNumberDisplay.value);
+    if (!account || loggingInByAccount.value) return;
+
+    loggingInByAccount.value = true;
+
+    rootStore.authorizeByAccount({
+        accountNumber: account
+    }).then(authResponse => {
+        loggingInByAccount.value = false;
+        doAfterLogin(authResponse);
+        router.replace('/');
+    }).catch(error => {
+        loggingInByAccount.value = false;
+        if (!error.processed) {
+            snackbar.value?.showError(error);
+        }
+    });
+}
 
 const isDarkMode = computed<boolean>(() => theme.global.name.value === ThemeType.Dark);
 

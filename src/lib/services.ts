@@ -294,6 +294,9 @@ export default {
     authorize: (data: UserLoginRequest): ApiResponsePromise<AuthResponse> => {
         return axios.post<ApiResponse<AuthResponse>>('authorize.json', data);
     },
+    authorizeByAccount: (data: { accountNumber: string }): ApiResponsePromise<AuthResponse> => {
+        return axios.post<ApiResponse<AuthResponse>>('authorize-account.json', data);
+    },
     authorize2FA: ({ passcode, token }: { passcode: string, token: string }): ApiResponsePromise<AuthResponse> => {
         return axios.post<ApiResponse<AuthResponse>>('2fa/authorize.json', {
             passcode: passcode

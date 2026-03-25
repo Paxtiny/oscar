@@ -120,6 +120,7 @@ type User struct {
 	VaultEncryptedDek     []byte `xorm:"BLOB"`
 	VaultEncryptedX25519  []byte `xorm:"BLOB"`
 	VaultX25519Public     []byte `xorm:"BLOB"`
+	AccountNumber         string `xorm:"VARCHAR(16) UNIQUE"`
 	NicodaimusKeyHash     string `xorm:"VARCHAR(64)"`
 	NicodaimusTier        string `xorm:"VARCHAR(20) NOT NULL DEFAULT 'free'"`
 	CreatedUnixTime       int64
@@ -163,6 +164,11 @@ type UserBasicInfo struct {
 type UserLoginRequest struct {
 	LoginName string `json:"loginName" binding:"required,notBlank,max=100,validUsername|validEmail"`
 	Password  string `json:"password" binding:"required,min=6,max=128"`
+}
+
+// AccountLoginRequest represents parameters for nicodAImus 16-digit account login
+type AccountLoginRequest struct {
+	AccountNumber string `json:"accountNumber" binding:"required,len=16,numeric"`
 }
 
 // UserRegisterRequest represents all parameters of user registering request
