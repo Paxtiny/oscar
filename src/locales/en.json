@@ -1,7 +1,7 @@
 {
     "global": {
         "app": {
-            "title": "oscar"
+            "title": "nicodAImus oscar"
         }
     },
     "language": {
@@ -2594,5 +2594,23 @@
     "An error occurred": "An error occurred",
     "Parameter Invalid": "Parameter Invalid",
     "Numeric Overflow": "Numeric Overflow",
-    "Click to close": "Click to close"
+    "Click to close": "Click to close",
+    "Your finances, your eyes only": "Your finances, your eyes only",
+    "End-to-end encrypted expense tracking. Not even we can read your data.": "End-to-end encrypted expense tracking. Not even we can read your data.",
+    "Zero-knowledge encryption": "Zero-knowledge encryption",
+    "No personal data required": "No personal data required",
+    "Bring your own storage": "Bring your own storage",
+    "Enter your nicodAImus account number": "Enter your nicodAImus account number",
+    "Account Number": "Account Number",
+    "1234 5678 9012 3456": "1234 5678 9012 3456",
+    "Comment": "Comment",
+    "Comment or note (optional)": "Comment or note (optional)",
+    "Create Encryption Passphrase": "Create Encryption Passphrase",
+    "Your passphrase encrypts all financial data. Only you can read it.": "Your passphrase encrypts all financial data. Only you can read it.",
+    "Passphrase": "Passphrase",
+    "Choose a strong passphrase": "Choose a strong passphrase",
+    "Confirm Passphrase": "Confirm Passphrase",
+    "Unlock": "Unlock",
+    "Forgot your passphrase? All encrypted data is permanently unrecoverable by design.": "Forgot your passphrase? All encrypted data is permanently unrecoverable by design.",
+    "Encrypted field": "Encrypted field"
 }

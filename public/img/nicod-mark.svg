@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220" role="img" aria-label="nicodAImus mark">
+  <title>nicodAImus mark</title>
+
+  <g transform="translate(38,26)">
+    <polygon points="72,0 144,42 144,126 72,168 0,126 0,42"
+             fill="#0b0b10"/>
+    <polygon points="72,0 144,42 144,126 72,168 0,126 0,42"
+             fill="none" stroke="#a78bfa" stroke-width="10" stroke-linejoin="round"/>
+    <polygon points="72,0 144,42 144,126 72,168 0,126 0,42"
+             fill="none" stroke="#7c3aed" stroke-width="6" stroke-linejoin="round"/>
+    <text x="72" y="112"
+          text-anchor="middle"
+          font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial"
+          font-size="110"
+          font-weight="800"
+          fill="#ffffff">n</text>
+  </g>
+</svg>

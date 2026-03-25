@@ -139,6 +139,65 @@ func (s *UserService) GetUserByEmail(c core.Context, email string) (*models.User
 	return user, nil
 }
 
+// GetUserByAccountNumber returns the user model by nicodAImus 16-digit account number
+func (s *UserService) GetUserByAccountNumber(c core.Context, accountNumber string) (*models.User, error) {
+	if accountNumber == "" {
+		return nil, errs.ErrUserNotFound
+	}
+
+	user := &models.User{}
+	has, err := s.UserDB().NewSession(c).Where("account_number=? AND deleted=?", accountNumber, false).Get(user)
+
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, errs.ErrUserNotFound
+	}
+
+	return user, nil
+}
+
+// GetOrCreateUserByAccountNumber finds a user by account number or creates one
+func (s *UserService) GetOrCreateUserByAccountNumber(c core.Context, accountNumber string, tier string) (*models.User, error) {
+	user, err := s.GetUserByAccountNumber(c, accountNumber)
+
+	if err == nil {
+		// Update tier if changed
+		if user.NicodaimusTier != tier {
+			user.NicodaimusTier = tier
+			user.UpdatedUnixTime = time.Now().Unix()
+			updateErr := s.UserDB().DoTransaction(c, func(sess *xorm.Session) error {
+				_, e := sess.ID(user.Uid).Cols("nicodaimus_tier", "updated_unix_time").Update(user)
+				return e
+			})
+			if updateErr != nil {
+				log.Warnf(c, "[users.GetOrCreateUserByAccountNumber] failed to update tier for account \"%s\", because %s", accountNumber, updateErr.Error())
+			}
+		}
+		return user, nil
+	}
+
+	// Create new user mapped to this account number
+	newUser := &models.User{
+		AccountNumber:      accountNumber,
+		Username:           accountNumber,
+		Email:              accountNumber + "@nicodaimus.local",
+		Nickname:           "oscar user",
+		NicodaimusTier:     tier,
+		EmailVerified:      true,
+		DefaultCurrency:    "EUR",
+		TransactionEditScope: models.TRANSACTION_EDIT_SCOPE_ALL,
+		FeatureRestriction: settings.Container.GetCurrentConfig().DefaultFeatureRestrictions,
+	}
+
+	err = s.CreateUser(c, newUser, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return newUser, nil
+}
+
 // GetUserAvatar returns the user avatar image data according to user uid
 func (s *UserService) GetUserAvatar(c core.Context, uid int64, fileExtension string) ([]byte, error) {
 	if uid <= 0 {

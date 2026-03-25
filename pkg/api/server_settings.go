@@ -46,6 +46,8 @@ func (a *ServerSettingsApi) ServerSettingsJavascriptHandler(c *core.WebContext) 
 	a.appendBooleanSetting(builder, "e", config.EnableDataExport)
 	a.appendBooleanSetting(builder, "i", config.EnableDataImport)
 
+	a.appendBooleanSetting(builder, "na", config.NicodaimusApiUrl != "")
+
 	a.appendStringSetting(builder, "op", config.OAuth2Provider)
 
 	if config.OAuth2Provider == settings.OAuth2ProviderOIDC && config.OAuth2OIDCCustomDisplayNameConfig.Enabled {

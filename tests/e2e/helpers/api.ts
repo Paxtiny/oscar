@@ -136,6 +136,83 @@ export async function shredVault(
 }
 
 /**
+ * Create a bank account for the user (requires auth token).
+ * Returns the account ID needed for creating transactions.
+ */
+export async function createAccount(
+    request: APIRequestContext,
+    token: string,
+    opts: { name?: string; currency?: string } = {}
+): Promise<{ accountId: string }> {
+    const res = await request.post(`${API_BASE}/api/v1/accounts/add.json`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
+        data: {
+            name: opts.name || 'Test Checking',
+            category: 1,       // Cash
+            type: 1,           // Single account
+            icon: '1',         // string (Go binding: json:"icon,string")
+            color: '7C3AED',
+            currency: opts.currency || 'EUR',
+            balance: 0,
+        },
+    });
+
+    const data = (await res.json()) as ApiResponse<any>;
+    if (!data.success) {
+        throw new Error(`Account creation failed: ${JSON.stringify(data)}`);
+    }
+
+    return { accountId: data.result.id };
+}
+
+/**
+ * Create an expense category for the user (requires auth token).
+ * Returns the category ID needed for creating transactions.
+ */
+export async function createCategory(
+    request: APIRequestContext,
+    token: string,
+    opts: { name?: string } = {}
+): Promise<{ categoryId: string }> {
+    const headers = { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' };
+
+    // Step 1: Create parent (primary) category
+    // Category types: 1=Income, 2=Expense, 3=Transfer
+    const parentRes = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+        headers,
+        data: {
+            name: opts.name || 'Test Expenses',
+            type: 2,
+            parentId: '0',
+            icon: '1',
+            color: 'ef4444',
+        },
+    });
+    const parentData = (await parentRes.json()) as ApiResponse<any>;
+    if (!parentData.success) {
+        throw new Error(`Parent category failed: ${JSON.stringify(parentData)}`);
+    }
+
+    // Step 2: Create sub-category (transactions require this, not primary)
+    const subRes = await request.post(`${API_BASE}/api/v1/transaction/categories/add.json`, {
+        headers,
+        data: {
+            name: 'General',
+            type: 2,
+            parentId: String(parentData.result.id),
+            icon: '1',
+            color: 'ef4444',
+        },
+    });
+    const subData = (await subRes.json()) as ApiResponse<any>;
+    if (!subData.success) {
+        throw new Error(`Sub-category failed: ${JSON.stringify(subData)}`);
+    }
+
+    return { categoryId: subData.result.id };
+}
+
+/**
  * Create a transaction via API (requires auth token).
  * The transaction data should already be encrypted by the caller.
  */
@@ -145,7 +222,7 @@ export async function createTransaction(
     txData: Record<string, any>
 ): Promise<ApiResponse<any>> {
     const res = await request.post(`${API_BASE}/api/v1/transactions/add.json`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'X-Timezone-Offset': '-60' },
         data: txData,
     });
 

@@ -1,7 +1,7 @@
 {
     "global": {
         "app": {
-            "title": "oscar"
+            "title": "nicodAImus oscar"
         }
     },
     "language": {
@@ -2594,5 +2594,23 @@
     "An error occurred": "Ein Fehler ist aufgetreten",
     "Parameter Invalid": "Parameter ungültig",
     "Numeric Overflow": "Numerischer Überlauf",
-    "Click to close": "Zum Schließen klicken"
+    "Click to close": "Zum Schließen klicken",
+    "Your finances, your eyes only": "Deine Finanzen, nur fuer deine Augen",
+    "End-to-end encrypted expense tracking. Not even we can read your data.": "Ende-zu-Ende verschluesselte Ausgabenverfolgung. Nicht einmal wir koennen deine Daten lesen.",
+    "Zero-knowledge encryption": "Zero-Knowledge-Verschluesselung",
+    "No personal data required": "Keine persoenlichen Daten erforderlich",
+    "Bring your own storage": "Eigener Speicher moeglich",
+    "Enter your nicodAImus account number": "Gib deine nicodAImus Kontonummer ein",
+    "Account Number": "Kontonummer",
+    "1234 5678 9012 3456": "1234 5678 9012 3456",
+    "Comment": "Kommentar",
+    "Comment or note (optional)": "Kommentar oder Notiz (optional)",
+    "Create Encryption Passphrase": "Verschluesselungs-Passphrase erstellen",
+    "Your passphrase encrypts all financial data. Only you can read it.": "Deine Passphrase verschluesselt alle Finanzdaten. Nur du kannst sie lesen.",
+    "Passphrase": "Passphrase",
+    "Choose a strong passphrase": "Waehle eine starke Passphrase",
+    "Confirm Passphrase": "Passphrase bestaetigen",
+    "Unlock": "Entsperren",
+    "Forgot your passphrase? All encrypted data is permanently unrecoverable by design.": "Passphrase vergessen? Alle verschluesselten Daten sind konstruktionsbedingt unwiederbringlich verloren.",
+    "Encrypted field": "Verschluesseltes Feld"
 }

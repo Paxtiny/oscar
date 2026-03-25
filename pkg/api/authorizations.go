@@ -3,6 +3,11 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/pquerna/otp/totp"
 
@@ -15,6 +20,8 @@ import (
 	"github.com/Paxtiny/oscar/pkg/services"
 	"github.com/Paxtiny/oscar/pkg/settings"
 )
+
+var accountNumberPattern = regexp.MustCompile(`^\d{16}$`)
 
 // AuthorizationsApi represents authorization api
 type AuthorizationsApi struct {
@@ -534,6 +541,109 @@ func (a *AuthorizationsApi) OAuth2CallbackAuthorizeHandler(c *core.WebContext) (
 
 	authResp := a.getAuthResponse(c, token, false, user, applicationCloudSettingSlice)
 	return authResp, nil
+}
+
+// AuthorizeByAccountHandler verifies a 16-digit nicodAImus account number
+// against the nicodAImus API and issues a session token
+func (a *AuthorizationsApi) AuthorizeByAccountHandler(c *core.WebContext) (any, *errs.Error) {
+	apiUrl := a.CurrentConfig().NicodaimusApiUrl
+	if apiUrl == "" {
+		log.Warnf(c, "[authorizations.AuthorizeByAccountHandler] nicodaimus api_url not configured")
+		return nil, errs.ErrSystemError
+	}
+
+	var credential models.AccountLoginRequest
+	err := c.ShouldBindJSON(&credential)
+
+	if err != nil {
+		log.Warnf(c, "[authorizations.AuthorizeByAccountHandler] parse request failed, because %s", err.Error())
+		return nil, errs.ErrLoginNameOrPasswordInvalid
+	}
+
+	if !accountNumberPattern.MatchString(credential.AccountNumber) {
+		return nil, errs.ErrLoginNameOrPasswordInvalid
+	}
+
+	// Validate account against nicodAImus API
+	tier, validateErr := validateNicodaimusAccount(apiUrl, credential.AccountNumber)
+	if validateErr != nil {
+		log.Warnf(c, "[authorizations.AuthorizeByAccountHandler] failed to validate account \"%s\", because %s", credential.AccountNumber, validateErr.Error())
+		return nil, errs.ErrLoginNameOrPasswordWrong
+	}
+
+	if tier == "unknown" {
+		log.Warnf(c, "[authorizations.AuthorizeByAccountHandler] account \"%s\" not found (tier=unknown)", credential.AccountNumber)
+		return nil, errs.ErrLoginNameOrPasswordWrong
+	}
+
+	// Find or create local user
+	user, err := a.users.GetOrCreateUserByAccountNumber(c, credential.AccountNumber, tier)
+	if err != nil {
+		log.Errorf(c, "[authorizations.AuthorizeByAccountHandler] failed to get/create user for account \"%s\", because %s", credential.AccountNumber, err.Error())
+		return nil, errs.Or(err, errs.ErrSystemError)
+	}
+
+	if user.Disabled {
+		return nil, errs.ErrUserIsDisabled
+	}
+
+	err = a.users.UpdateUserLastLoginTime(c, user.Uid)
+	if err != nil {
+		log.Warnf(c, "[authorizations.AuthorizeByAccountHandler] failed to update last login time for user \"uid:%d\", because %s", user.Uid, err.Error())
+	}
+
+	token, claims, err := a.tokens.CreateToken(c, user)
+	if err != nil {
+		log.Errorf(c, "[authorizations.AuthorizeByAccountHandler] failed to create token for user \"uid:%d\", because %s", user.Uid, err.Error())
+		return nil, errs.ErrTokenGenerating
+	}
+
+	c.SetTextualToken(token)
+	c.SetTokenClaims(claims)
+	c.SetTokenContext("")
+
+	log.Infof(c, "[authorizations.AuthorizeByAccountHandler] user \"uid:%d\" (account: %s, tier: %s) has logged in", user.Uid, credential.AccountNumber, tier)
+
+	authResp := a.getAuthResponse(c, token, false, user, nil)
+	return authResp, nil
+}
+
+// validateNicodaimusAccount calls the nicodAImus /account-api/status endpoint
+// Returns the tier string ("free", "alfred", "pro", "jared") or "unknown"
+func validateNicodaimusAccount(apiUrl string, accountNumber string) (string, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/account-api/status", apiUrl), nil)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("x-nicod-account", accountNumber)
+	req.Header.Set("User-Agent", "oscar/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("nicodaimus API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var statusResp struct {
+		Tier string `json:"tier"`
+	}
+	if err := json.Unmarshal(body, &statusResp); err != nil {
+		return "", err
+	}
+
+	return statusResp.Tier, nil
 }
 
 func (a *AuthorizationsApi) getAuthResponse(c *core.WebContext, token string, need2FA bool, user *models.User, applicationCloudSettings *models.ApplicationCloudSettingSlice) *models.AuthResponse {

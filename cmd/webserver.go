@@ -267,6 +267,11 @@ func startWebServer(c *core.CliContext) error {
 	apiRoute.Use(bindMiddleware(middlewares.RequestId(config)))
 	apiRoute.Use(bindMiddleware(middlewares.RequestLog))
 	{
+		// nicodAImus 16-digit account number login (always enabled when api_url configured)
+		if config.NicodaimusApiUrl != "" {
+			apiRoute.POST("/authorize-account.json", bindApiWithTokenUpdate(api.Authorizations.AuthorizeByAccountHandler, config))
+		}
+
 		if config.EnableInternalAuth {
 			apiRoute.POST("/authorize.json", bindApiWithTokenUpdate(api.Authorizations.AuthorizeHandler, config))
 		}

@@ -3,6 +3,10 @@ function getServerSetting(key: string): string | number | boolean | Record<strin
     return settings[key];
 }
 
+export function isNicodaimusAuthEnabled(): boolean {
+    return getServerSetting('na') === 1;
+}
+
 export function isInternalAuthEnabled(): boolean {
     return getServerSetting('a') !== 0;
 }

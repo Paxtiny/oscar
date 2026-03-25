@@ -96,6 +96,12 @@
                                         v-model="transaction.name"
                                     />
                                 </v-col>
+                                <v-col cols="12" v-if="isEncrypted">
+                                    <div class="d-flex align-center ga-1">
+                                        <v-icon :icon="mdiLock" size="14" color="primary" />
+                                        <span class="text-caption text-primary font-weight-medium">{{ tt('Encrypted field') }}</span>
+                                    </div>
+                                </v-col>
                                 <v-col cols="12" :md="transaction.type === TransactionType.Transfer ? 6 : 12">
                                     <amount-input class="transaction-edit-amount font-weight-bold"
                                                   :color="sourceAmountColor"
@@ -337,14 +343,21 @@
                                     />
                                 </v-col>
                                 <v-col cols="12" md="12">
+                                    <div class="d-flex align-center justify-space-between mb-1" v-if="isEncrypted">
+                                        <span></span>
+                                        <div class="d-flex align-center ga-1">
+                                            <v-icon :icon="mdiLock" size="14" color="primary" />
+                                            <span class="text-caption text-primary font-weight-medium">{{ tt('Encrypted field') }}</span>
+                                        </div>
+                                    </div>
                                     <v-textarea
                                         type="text"
                                         persistent-placeholder
                                         rows="3"
                                         :readonly="mode === TransactionEditPageMode.View"
                                         :disabled="loading || submitting"
-                                        :label="tt('Description')"
-                                        :placeholder="tt('Your transaction description (optional)')"
+                                        :label="tt('Comment')"
+                                        :placeholder="tt('Comment or note (optional)')"
                                         v-model="transaction.comment"
                                     />
                                 </v-col>
@@ -531,6 +544,8 @@ import {
 } from '@/lib/map/index.ts';
 import logger from '@/lib/logger.ts';
 
+import { useVaultStore } from '@/stores/vault.ts';
+
 import {
     mdiDotsVertical,
     mdiEyeOffOutline,
@@ -541,7 +556,8 @@ import {
     mdiMenuDown,
     mdiImagePlusOutline,
     mdiTrashCanOutline,
-    mdiFullscreen
+    mdiFullscreen,
+    mdiLock
 } from '@mdi/js';
 
 export interface TransactionEditOptions extends SetTransactionOptions {
@@ -618,6 +634,9 @@ const {
     swapTransactionData,
     getTransactionPictureUrl
 } = useTransactionEditPageBase(props.type);
+
+const vaultStore = useVaultStore();
+const isEncrypted = computed(() => vaultStore.vaultUnlocked);
 
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
