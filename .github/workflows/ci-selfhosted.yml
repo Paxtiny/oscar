@@ -98,7 +98,7 @@ jobs:
 
       - name: Start oscar backend
         run: |
-          ./oscar-server > /tmp/oscar-backend.log 2>&1 &
+          ./oscar-server server run > /tmp/oscar-backend.log 2>&1 &
           echo "Waiting for oscar backend..."
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8080/api/v1/tokens/list.json > /dev/null 2>&1; then
