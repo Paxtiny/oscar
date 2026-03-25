@@ -92,6 +92,9 @@ test.describe('oscar.e2e.encryption-roundtrip', () => {
         const accResult = await createAccount(page.request, loginResult.token, { name: 'Roundtrip Checking' });
         const catResult = await createCategory(page.request, loginResult.token, { name: 'Roundtrip Expenses' });
 
+        console.log('Account created:', JSON.stringify(accResult));
+        console.log('Category created:', JSON.stringify(catResult));
+
         const now = Math.floor(Date.now() / 1000);
         const txResult = await createTransaction(page.request, loginResult.token, {
             type: 3,  // Expense (1=ModifyBalance, 2=Income, 3=Expense, 4=Transfer)
