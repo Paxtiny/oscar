@@ -41,6 +41,9 @@ import {
 import type {
     RecognizedReceiptImageResponse
 } from '@/models/large_language_model.ts';
+import type { RecognitionProgress } from '@/lib/recognition/types.ts';
+import { RecognitionProviderType } from '@/lib/recognition/types.ts';
+import { getProvider, getDefaultProviderType } from '@/lib/recognition/provider-registry.ts';
 
 import {
     getUserTransactionDraft,
@@ -105,6 +108,9 @@ export interface TransactionMonthList {
 }
 
 export const useTransactionsStore = defineStore('transactions', () => {
+    // Map of active recognition operations for cancellation support
+    const activeRecognitions = new Map<string, AbortController>();
+
     const settingsStore = useSettingsStore();
     const userStore = useUserStore();
     const accountsStore = useAccountsStore();
@@ -1231,36 +1237,59 @@ export const useTransactionsStore = defineStore('transactions', () => {
         });
     }
 
-    function recognizeReceiptImage({ imageFile, cancelableUuid }: { imageFile: File, cancelableUuid?: string }): Promise<RecognizedReceiptImageResponse> {
-        return new Promise((resolve, reject) => {
-            services.recognizeReceiptImage({ imageFile, cancelableUuid }).then(response => {
-                const data = response.data;
+    function recognizeReceiptImage({ imageFile, cancelableUuid, providerType, language, onProgress }: {
+        imageFile: File,
+        cancelableUuid?: string,
+        providerType?: RecognitionProviderType,
+        language?: string,
+        onProgress?: (progress: RecognitionProgress) => void,
+    }): Promise<RecognizedReceiptImageResponse> {
+        const type = providerType ?? getDefaultProviderType();
+        const provider = getProvider(type);
 
-                if (!data || !data.success || !data.result) {
-                    reject({ message: 'Unable to recognize image' });
-                    return;
-                }
+        // Create AbortController that bridges the cancelableUuid mechanism
+        const abortController = new AbortController();
 
-                resolve(data.result);
-            }).catch(error => {
-                if (error.canceled) {
-                    reject(error);
-                }
+        if (cancelableUuid) {
+            // Store the controller so cancelRecognizeReceiptImage can abort it
+            activeRecognitions.set(cancelableUuid, abortController);
+        }
 
-                logger.error('failed to recognize image', error);
+        return provider.recognize(
+            imageFile,
+            language ?? 'en',
+            onProgress,
+            abortController.signal
+        ).catch(error => {
+            logger.error('failed to recognize image', error);
 
-                if (error.response && error.response.data && error.response.data.errorMessage) {
-                    reject({ error: error.response.data });
-                } else if (!error.processed) {
-                    reject({ message: 'Unable to recognize image' });
-                } else {
-                    reject(error);
-                }
-            });
+            if (error.canceled || abortController.signal.aborted) {
+                throw { canceled: true };
+            }
+
+            if (error.response && error.response.data && error.response.data.errorMessage) {
+                throw { error: error.response.data };
+            } else if (!error.processed) {
+                throw { message: error.message || 'Unable to recognize image' };
+            }
+
+            throw error;
+        }).finally(() => {
+            if (cancelableUuid) {
+                activeRecognitions.delete(cancelableUuid);
+            }
         });
     }
 
     function cancelRecognizeReceiptImage(cancelableUuid: string): void {
+        const controller = activeRecognitions.get(cancelableUuid);
+
+        if (controller) {
+            controller.abort();
+            activeRecognitions.delete(cancelableUuid);
+        }
+
+        // Also cancel any in-flight HTTP request (for LLM provider)
         services.cancelRequest(cancelableUuid);
     }
 
