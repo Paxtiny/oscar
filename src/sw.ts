@@ -199,6 +199,17 @@ clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
+// Cache Tesseract.js language data files for offline OCR support
+registerRoute(
+    /.*tessdata.*\.traineddata(\.gz)?$/,
+    new CacheFirst({
+        cacheName: 'oscar-ocr-lang-cache',
+        plugins: [
+            new DynamicExpirationPlugin(10, 30 * 24 * 60 * 60 * 1000) // 10 entries, 30 days
+        ]
+    })
+);
+
 registerRoute(
     /.*\/img\/desktop\/.*\.(png|jpg|jpeg|gif|tiff|bmp|svg)/,
     new StaleWhileRevalidate({

@@ -1,10 +1,12 @@
 import { type RecognitionProvider, RecognitionProviderType } from './types.ts';
 import { LlmProvider } from './llm-provider.ts';
+import { OcrProvider } from './ocr-provider.ts';
 
 const providers: Map<RecognitionProviderType, RecognitionProvider> = new Map();
 
 // Register built-in providers
 providers.set(RecognitionProviderType.LLM, new LlmProvider());
+providers.set(RecognitionProviderType.OCR, new OcrProvider());
 
 /**
  * Register a recognition provider (used by ocr-provider.ts in PR 3).
