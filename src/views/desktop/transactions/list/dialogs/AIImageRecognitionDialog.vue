@@ -5,6 +5,17 @@
                 <h4 class="text-h4">{{ tt('AI Image Recognition') }}</h4>
             </template>
 
+            <v-card-text class="pt-0 pb-2">
+                <v-btn-toggle v-model="selectedProvider" mandatory density="comfortable" class="w-100">
+                    <v-btn :value="RecognitionProviderType.OCR" class="flex-grow-1">
+                        {{ tt('On-device OCR') }}
+                    </v-btn>
+                    <v-btn :value="RecognitionProviderType.LLM" class="flex-grow-1">
+                        {{ tt('AI Recognition') }}
+                    </v-btn>
+                </v-btn-toggle>
+            </v-card-text>
+
             <v-card-text class="d-flex flex-column flex-md-row flex-grow-1 overflow-y-auto" style="height: 480px">
                 <div class="w-100 h-100 border position-relative"
                      @dragenter.prevent="onDragEnter"
@@ -15,10 +26,15 @@
                          :class="{ 'dropzone': true, 'dropzone-dark': isDarkMode, 'dropzone-blurry-bg': loading || isDragOver || recognizing, 'dropzone-dragover': isDragOver }">
                         <div class="d-inline-flex flex-column" v-if="!loading && !imageFile && !isDragOver">
                             <h3 class="pa-2">{{ tt('You can drag and drop, paste or click to select a receipt or transaction image') }}</h3>
-                            <span class="pa-2">{{ tt('Uploaded image and personal data will be sent to the large language model, please be aware of potential privacy risks.') }}</span>
+                            <span class="pa-2" v-if="selectedProvider === RecognitionProviderType.LLM">{{ tt('Uploaded image and personal data will be sent to the large language model, please be aware of potential privacy risks.') }}</span>
+                            <span class="pa-2" v-else>{{ tt('Recognition runs entirely on your device. Your image is never uploaded.') }}</span>
                         </div>
                         <h3 class="pa-2" v-else-if="!loading && isDragOver">{{ tt('Release to load image') }}</h3>
                         <h3 class="pa-2" v-else-if="loading">{{ tt('Loading image...') }}</h3>
+                        <div class="d-inline-flex flex-column align-center pa-4" v-else-if="recognizing && selectedProvider === RecognitionProviderType.OCR">
+                            <v-progress-linear :model-value="recognitionProgress * 100" height="8" rounded class="mb-2" style="max-width: 300px" />
+                            <span>{{ recognitionMessage }}</span>
+                        </div>
                         <h3 class="pa-2" v-else-if="recognizing">{{ tt('AI can make mistakes. Check important info.') }}</h3>
                     </div>
                     <v-img :class="{ 'cursor-pointer': !loading && !recognizing && !isDragOver, 'h-100': true }"
@@ -34,7 +50,7 @@
                 <div class="w-100 d-flex justify-center flex-wrap mt-sm-1 mt-md-2 gap-4">
                     <v-btn :disabled="loading || recognizing || !imageFile" @click="recognize">
                         {{ tt('Recognize') }}
-                        <v-progress-circular indeterminate size="22" class="ms-2" v-if="recognizing"></v-progress-circular>
+                        <v-progress-circular indeterminate size="22" class="ms-2" v-if="recognizing && selectedProvider === RecognitionProviderType.LLM"></v-progress-circular>
                     </v-btn>
                     <v-btn color="secondary" variant="tonal" :disabled="loading"
                            @click="cancelRecognize" v-if="recognizing && cancelRecognizingUuid">{{ tt('Cancel Recognition') }}</v-btn>
@@ -64,9 +80,12 @@ import { ThemeType } from '@/core/theme.ts';
 import { SUPPORTED_IMAGE_EXTENSIONS } from '@/consts/file.ts';
 
 import type { RecognizedReceiptImageResponse } from '@/models/large_language_model.ts';
+import { RecognitionProviderType } from '@/lib/recognition/types.ts';
+import type { RecognitionProgress } from '@/lib/recognition/types.ts';
 
 import { generateRandomUUID } from '@/lib/misc.ts';
 import { compressJpgImage } from '@/lib/ui/common.ts';
+import { getSessionCurrentLanguageKey } from '@/lib/settings.ts';
 import logger from '@/lib/logger.ts';
 
 type SnackBarType = InstanceType<typeof SnackBar>;
@@ -90,6 +109,9 @@ const cancelRecognizingUuid = ref<string | undefined>(undefined);
 const imageFile = ref<File | null>(null);
 const imageSrc = ref<string | undefined>(undefined);
 const isDragOver = ref<boolean>(false);
+const selectedProvider = ref<RecognitionProviderType>(RecognitionProviderType.OCR);
+const recognitionProgress = ref<number>(0);
+const recognitionMessage = ref<string>('');
 
 const isDarkMode = computed<boolean>(() => theme.global.name.value === ThemeType.Dark);
 
@@ -118,6 +140,8 @@ function open(): Promise<RecognizedReceiptImageResponse> {
     cancelRecognizingUuid.value = undefined;
     imageFile.value = null;
     imageSrc.value = undefined;
+    recognitionProgress.value = 0;
+    recognitionMessage.value = '';
 
     return new Promise((resolve, reject) => {
         resolveFunc = resolve;
@@ -151,6 +175,20 @@ function openImage(event: Event): void {
     loadImage(image);
 }
 
+function onProgressUpdate(progress: RecognitionProgress): void {
+    recognitionProgress.value = progress.progress;
+
+    if (progress.message) {
+        recognitionMessage.value = tt(progress.message);
+    } else if (progress.phase === 'loading') {
+        recognitionMessage.value = tt('Loading OCR engine...');
+    } else if (progress.phase === 'recognizing') {
+        recognitionMessage.value = tt('Recognizing...');
+    } else if (progress.phase === 'parsing') {
+        recognitionMessage.value = tt('Extracting receipt data...');
+    }
+}
+
 function recognize(): void {
     if (loading.value || recognizing.value || !imageFile.value) {
         return;
@@ -158,10 +196,18 @@ function recognize(): void {
 
     cancelRecognizingUuid.value = generateRandomUUID();
     recognizing.value = true;
+    recognitionProgress.value = 0;
+    recognitionMessage.value = '';
+
+    const isOcr = selectedProvider.value === RecognitionProviderType.OCR;
+    const language = getSessionCurrentLanguageKey() || 'en';
 
     transactionsStore.recognizeReceiptImage({
         imageFile: imageFile.value,
-        cancelableUuid: cancelRecognizingUuid.value
+        cancelableUuid: cancelRecognizingUuid.value,
+        providerType: selectedProvider.value,
+        language,
+        onProgress: isOcr ? onProgressUpdate : undefined,
     }).then(response => {
         resolveFunc?.(response);
         showState.value = false;
@@ -201,6 +247,8 @@ function cancel(): void {
     cancelRecognizingUuid.value = undefined;
     imageFile.value = null;
     imageSrc.value = undefined;
+    recognitionProgress.value = 0;
+    recognitionMessage.value = '';
 }
 
 function onDragEnter(): void {
