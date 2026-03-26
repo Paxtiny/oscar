@@ -91,10 +91,10 @@
                                 />
                             </v-col>
                             <v-col cols="12">
-                                <v-btn-toggle v-model="newBudget.period" mandatory color="primary" variant="outlined" divided>
-                                    <v-btn :value="1">{{ tt('Weekly') }}</v-btn>
-                                    <v-btn :value="2">{{ tt('Monthly') }}</v-btn>
-                                    <v-btn :value="3">{{ tt('Yearly') }}</v-btn>
+                                <v-btn-toggle v-model="newBudget.period" mandatory color="primary" variant="outlined" divided class="w-100">
+                                    <v-btn :value="1" class="flex-grow-1">{{ tt('Weekly') }}</v-btn>
+                                    <v-btn :value="2" class="flex-grow-1">{{ tt('Monthly') }}</v-btn>
+                                    <v-btn :value="3" class="flex-grow-1">{{ tt('Yearly') }}</v-btn>
                                 </v-btn-toggle>
                             </v-col>
                             <v-col cols="12">
