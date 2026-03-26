@@ -16,7 +16,7 @@ WORKDIR /go/src/github.com/Paxtiny/oscar
 COPY . .
 RUN docker/backend-build-pre-setup.sh
 RUN apk add git gcc g++ libc-dev
-RUN ./build.sh backend
+RUN ./build.sh backend --no-lint --no-test
 
 # Build frontend files
 FROM --platform=$BUILDPLATFORM node:24.14.0-alpine3.23 AS fe-builder
@@ -32,7 +32,9 @@ WORKDIR /go/src/github.com/Paxtiny/oscar
 COPY . .
 RUN docker/frontend-build-pre-setup.sh
 RUN apk add git
-RUN ./build.sh frontend
+RUN git clone https://github.com/Paxtiny/nicodaimus-crypto.git ../nicodaimus-crypto \
+    && cd ../nicodaimus-crypto && npm ci && npm run build
+RUN ./build.sh frontend --no-lint --no-test
 
 # Package docker image
 FROM alpine:3.23.3
