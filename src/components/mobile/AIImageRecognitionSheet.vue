@@ -23,6 +23,14 @@
                         {{ tt('AI Recognition') }}
                     </f7-button>
                 </f7-segmented>
+                <div class="display-flex align-items-center margin-top-half" v-if="selectedProvider === RecognitionProviderType.OCR">
+                    <small class="margin-right-half">{{ tt('Receipt language') }}:</small>
+                    <select v-model="selectedLanguage" class="ocr-language-select">
+                        <option v-for="lang in ocrLanguages" :key="lang.code" :value="lang.code">
+                            {{ lang.displayName }}
+                        </option>
+                    </select>
+                </div>
             </div>
             <div class="image-container display-flex justify-content-center" @click="showOpenImage">
                 <img :src="imageSrc" v-if="imageSrc && !recognizing" />
@@ -67,7 +75,10 @@ import type { RecognitionProgress } from '@/lib/recognition/types.ts';
 import { generateRandomUUID } from '@/lib/misc.ts';
 import { compressJpgImage } from '@/lib/ui/common.ts';
 import { getSessionCurrentLanguageKey } from '@/lib/settings.ts';
+import { getOcrLanguageOptions, getDefaultOcrLanguage } from '@/lib/recognition/language-map.ts';
 import logger from '@/lib/logger.ts';
+
+const ocrLanguages = getOcrLanguageOptions();
 
 defineProps<{
     show: boolean;
@@ -91,6 +102,7 @@ const cancelRecognizingUuid = ref<string | undefined>(undefined);
 const imageFile = ref<File | null>(null);
 const imageSrc = ref<string | undefined>(undefined);
 const selectedProvider = ref<RecognitionProviderType>(RecognitionProviderType.OCR);
+const selectedLanguage = ref<string>(getDefaultOcrLanguage(getSessionCurrentLanguageKey() || 'en'));
 const recognitionProgress = ref<number>(0);
 const recognitionMessage = ref<string>('');
 
@@ -173,7 +185,9 @@ function confirm(): void {
         showCancelableLoading('Recognizing', 'AI can make mistakes. Check important info.', 'Cancel Recognition', cancelRecognize);
     }
 
-    const language = getSessionCurrentLanguageKey() || 'en';
+    const language = selectedProvider.value === RecognitionProviderType.OCR
+        ? selectedLanguage.value
+        : getSessionCurrentLanguageKey() || 'en';
 
     transactionsStore.recognizeReceiptImage({
         imageFile: imageFile.value,
@@ -282,5 +296,14 @@ defineExpose({
 
 .recognition-provider-toggle {
     border-bottom: 1px solid var(--f7-page-master-border-color);
+}
+
+.ocr-language-select {
+    background: transparent;
+    border: 1px solid var(--f7-page-master-border-color);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: var(--f7-input-font-size);
+    color: inherit;
 }
 </style>

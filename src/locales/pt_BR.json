@@ -1941,6 +1941,7 @@
     "Recognizing...": "Reconhecendo...",
     "Extracting receipt data...": "Extraindo dados do recibo...",
     "Loading language data...": "Carregando dados do idioma...",
+    "Receipt language": "Idioma do recibo",
     "Category": "Categoria",
     "Secondary Category": "Categoria Secundária",
     "Expense Category": "Categoria de Despesa",

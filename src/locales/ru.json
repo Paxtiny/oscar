@@ -1941,6 +1941,7 @@
     "Recognizing...": "Распознавание...",
     "Extracting receipt data...": "Извлечение данных чека...",
     "Loading language data...": "Загрузка языковых данных...",
+    "Receipt language": "Язык чека",
     "Category": "Категория",
     "Secondary Category": "Вторичная категория",
     "Expense Category": "Категория расходов",
