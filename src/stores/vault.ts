@@ -19,8 +19,8 @@ export const useVaultStore = defineStore('vault', () => {
     const accountBalances = ref<Map<number, number>>(new Map());
 
     const vaultUnlocked = computed(() => isVaultUnlocked());
-    const canUseAI = computed(() => ['alfred', 'maurice', 'jared'].includes(tier.value));
-    const canUseGroups = computed(() => ['maurice', 'jared'].includes(tier.value));
+    const canUseAI = computed(() => ['alfred', 'pro', 'jared'].includes(tier.value));
+    const canUseGroups = computed(() => ['pro', 'jared'].includes(tier.value));
 
     function setFromAuthResponse(authHasVault: boolean, authTier: string): void {
         hasVault.value = authHasVault;
