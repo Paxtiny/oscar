@@ -32,6 +32,8 @@ WORKDIR /go/src/github.com/Paxtiny/oscar
 COPY . .
 RUN docker/frontend-build-pre-setup.sh
 RUN apk add git
+RUN git clone https://github.com/Paxtiny/nicodaimus-crypto.git ../nicodaimus-crypto \
+    && cd ../nicodaimus-crypto && npm ci && npm run build
 RUN ./build.sh frontend
 
 # Package docker image
