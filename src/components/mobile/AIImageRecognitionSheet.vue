@@ -14,12 +14,30 @@
             </div>
         </f7-toolbar>
         <f7-page-content class="no-margin-vertical no-padding-vertical">
+            <div class="recognition-provider-toggle padding-horizontal padding-vertical-half">
+                <f7-segmented strong>
+                    <f7-button :active="selectedProvider === RecognitionProviderType.OCR" @click="selectProvider(RecognitionProviderType.OCR)">
+                        {{ tt('On-device OCR') }}
+                    </f7-button>
+                    <f7-button :active="selectedProvider === RecognitionProviderType.LLM" @click="selectProvider(RecognitionProviderType.LLM)">
+                        {{ tt('AI Recognition') }}
+                    </f7-button>
+                </f7-segmented>
+            </div>
             <div class="image-container display-flex justify-content-center" @click="showOpenImage">
-                <img :src="imageSrc" v-if="imageSrc" />
+                <img :src="imageSrc" v-if="imageSrc && !recognizing" />
+                <div v-if="imageSrc && recognizing" class="image-container-background display-flex flex-direction-column justify-content-center align-items-center padding-horizontal">
+                    <f7-progressbar :progress="recognitionProgress * 100" />
+                    <span class="margin-top-half">{{ recognitionMessage }}</span>
+                    <f7-button class="margin-top" small outline color="red" @click="cancelRecognize">
+                        {{ tt('Cancel Recognition') }}
+                    </f7-button>
+                </div>
                 <div class="image-container-background display-flex justify-content-center align-items-center text-align-center padding-horizontal" v-if="!imageSrc">
                     <div class="display-inline-flex flex-direction-column" v-if="!loading">
                         <span>{{ tt('Click here to select a receipt or transaction image') }}</span>
-                        <small class="margin-top-half">{{ tt('Uploaded image and personal data will be sent to the large language model, please be aware of potential privacy risks.') }}</small>
+                        <small class="margin-top-half" v-if="selectedProvider === 'llm'">{{ tt('Uploaded image and personal data will be sent to the large language model, please be aware of potential privacy risks.') }}</small>
+                        <small class="margin-top-half" v-else>{{ tt('Recognition runs entirely on your device. Your image is never uploaded.') }}</small>
                     </div>
                     <span v-else-if="loading">{{ tt('Loading image...') }}</span>
                 </div>
@@ -43,9 +61,12 @@ import { KnownFileType } from '@/core/file.ts';
 import { SUPPORTED_IMAGE_EXTENSIONS } from '@/consts/file.ts';
 
 import type { RecognizedReceiptImageResponse } from '@/models/large_language_model.ts';
+import { RecognitionProviderType } from '@/lib/recognition/types.ts';
+import type { RecognitionProgress } from '@/lib/recognition/types.ts';
 
 import { generateRandomUUID } from '@/lib/misc.ts';
 import { compressJpgImage } from '@/lib/ui/common.ts';
+import { getSessionCurrentLanguageKey } from '@/lib/settings.ts';
 import logger from '@/lib/logger.ts';
 
 defineProps<{
@@ -69,6 +90,13 @@ const recognizing = ref<boolean>(false);
 const cancelRecognizingUuid = ref<string | undefined>(undefined);
 const imageFile = ref<File | null>(null);
 const imageSrc = ref<string | undefined>(undefined);
+const selectedProvider = ref<RecognitionProviderType>(RecognitionProviderType.OCR);
+const recognitionProgress = ref<number>(0);
+const recognitionMessage = ref<string>('');
+
+function selectProvider(provider: RecognitionProviderType): void {
+    selectedProvider.value = provider;
+}
 
 function loadImage(image: Blob): void {
     loading.value = true;
@@ -114,6 +142,20 @@ function openImage(event: Event): void {
     loadImage(image);
 }
 
+function onProgressUpdate(progress: RecognitionProgress): void {
+    recognitionProgress.value = progress.progress;
+
+    if (progress.message) {
+        recognitionMessage.value = tt(progress.message);
+    } else if (progress.phase === 'loading') {
+        recognitionMessage.value = tt('Loading OCR engine...');
+    } else if (progress.phase === 'recognizing') {
+        recognitionMessage.value = tt('Recognizing...');
+    } else if (progress.phase === 'parsing') {
+        recognitionMessage.value = tt('Extracting receipt data...');
+    }
+}
+
 function confirm(): void {
     if (loading.value || recognizing.value || !imageFile.value) {
         return;
@@ -121,15 +163,32 @@ function confirm(): void {
 
     cancelRecognizingUuid.value = generateRandomUUID();
     recognizing.value = true;
-    showCancelableLoading('Recognizing', 'AI can make mistakes. Check important info.', 'Cancel Recognition', cancelRecognize);
+    recognitionProgress.value = 0;
+    recognitionMessage.value = '';
+
+    const isLlm = selectedProvider.value === RecognitionProviderType.LLM;
+
+    // For LLM, use the original modal loading dialog (indeterminate progress)
+    if (isLlm) {
+        showCancelableLoading('Recognizing', 'AI can make mistakes. Check important info.', 'Cancel Recognition', cancelRecognize);
+    }
+
+    const language = getSessionCurrentLanguageKey() || 'en';
 
     transactionsStore.recognizeReceiptImage({
         imageFile: imageFile.value,
-        cancelableUuid: cancelRecognizingUuid.value
+        cancelableUuid: cancelRecognizingUuid.value,
+        providerType: selectedProvider.value,
+        language,
+        onProgress: isLlm ? undefined : onProgressUpdate,
     }).then(response => {
         recognizing.value = false;
         cancelRecognizingUuid.value = undefined;
-        closeAllDialog();
+
+        if (isLlm) {
+            closeAllDialog();
+        }
+
         emit('update:show', false);
         emit('recognition:change', response);
     }).catch(error => {
@@ -139,7 +198,10 @@ function confirm(): void {
 
         recognizing.value = false;
         cancelRecognizingUuid.value = undefined;
-        closeAllDialog();
+
+        if (isLlm) {
+            closeAllDialog();
+        }
 
         if (!error.processed) {
             showToast(error.message || error);
@@ -171,6 +233,8 @@ function close(): void {
     cancelRecognizingUuid.value = undefined;
     imageFile.value = null;
     imageSrc.value = undefined;
+    recognitionProgress.value = 0;
+    recognitionMessage.value = '';
 }
 
 function onSheetOpen(): void {
@@ -179,6 +243,8 @@ function onSheetOpen(): void {
     cancelRecognizingUuid.value = undefined;
     imageFile.value = null;
     imageSrc.value = undefined;
+    recognitionProgress.value = 0;
+    recognitionMessage.value = '';
 }
 
 function onSheetClosed(): void {
@@ -212,5 +278,9 @@ defineExpose({
     > div {
         font-size: var(--f7-input-font-size);
     }
+}
+
+.recognition-provider-toggle {
+    border-bottom: 1px solid var(--f7-page-master-border-color);
 }
 </style>
