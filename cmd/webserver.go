@@ -458,6 +458,12 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/budgets/modify.json", bindApi(api.BudgetsApiInstance.BudgetModifyHandler))
 			apiV1Route.POST("/budgets/delete.json", bindApi(api.BudgetsApiInstance.BudgetDeleteHandler))
 
+			// User Storage (BYOS)
+			apiV1Route.GET("/storage/config.json", bindApi(api.UserStorageApiInstance.UserStorageGetHandler))
+			apiV1Route.POST("/storage/config.json", bindApi(api.UserStorageApiInstance.UserStorageUpdateHandler))
+			apiV1Route.POST("/storage/test.json", bindApi(api.UserStorageApiInstance.UserStorageTestHandler))
+			apiV1Route.POST("/storage/reset.json", bindApi(api.UserStorageApiInstance.UserStorageResetHandler))
+
 			// Savings Goals
 			apiV1Route.GET("/savings-goals/list.json", bindApi(api.SavingsGoalsApiInstance.SavingsGoalListHandler))
 			apiV1Route.POST("/savings-goals/add.json", bindApi(api.SavingsGoalsApiInstance.SavingsGoalCreateHandler))
