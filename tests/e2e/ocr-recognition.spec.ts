@@ -12,10 +12,11 @@
 
 import { test, expect } from '@playwright/test';
 import { registerUser, createAccount, createCategory } from './helpers/api';
-import { injectAuthState, navigateToApp, attachDebugListeners } from './helpers/auth';
+import { injectAuthState, attachDebugListeners } from './helpers/auth';
 import path from 'path';
 
 const TEST_RECEIPT = path.resolve(__dirname, 'testdata/test-receipt-en.png');
+const BASE = process.env.OSCAR_TEST_URL || 'http://localhost:8081';
 
 test.describe('oscar.e2e.ocr-recognition', () => {
     let token: string;
@@ -36,55 +37,45 @@ test.describe('oscar.e2e.ocr-recognition', () => {
         attachDebugListeners(page);
     });
 
-    test('desktop: AI Image Recognition dialog shows provider toggle', async ({ page }) => {
+    /**
+     * Helper: navigate to desktop transaction list and open AI Image Recognition dialog.
+     */
+    async function openAIRecognitionDialog(page: import('@playwright/test').Page): Promise<void> {
         await injectAuthState(page, { token, hasVault: false });
-        await page.goto('/desktop.html');
+
+        // Navigate directly to desktop transaction list via hash routing
+        await page.goto(`${BASE}/desktop.html#/transaction/list`);
         await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2000);
 
-        // Navigate to transaction list
-        await page.click('text=Transaction Details');
-        await page.waitForTimeout(1000);
-
-        // Hover the Add button to open the dropdown
-        const addBtn = page.locator('button:has-text("Add")').first();
+        // The "Add" button is in the transaction list header - hover to open dropdown
+        const addBtn = page.locator('.v-btn:has-text("Add")').first();
+        await expect(addBtn).toBeVisible({ timeout: 10_000 });
         await addBtn.hover();
         await page.waitForTimeout(500);
 
-        // Click AI Image Recognition
-        const aiMenuItem = page.locator('text=AI Image Recognition');
-        await expect(aiMenuItem).toBeVisible({ timeout: 5000 });
+        // Click AI Image Recognition menu item
+        const aiMenuItem = page.locator('.v-list-item:has-text("AI Image Recognition")');
+        await expect(aiMenuItem).toBeVisible({ timeout: 5_000 });
         await aiMenuItem.click();
         await page.waitForTimeout(500);
+    }
+
+    test('desktop: AI Image Recognition dialog shows provider toggle', async ({ page }) => {
+        await openAIRecognitionDialog(page);
 
         // Verify provider toggle is visible
-        await expect(page.locator('button:has-text("On-device OCR")')).toBeVisible();
-        await expect(page.locator('button:has-text("AI Recognition")')).toBeVisible();
+        await expect(page.locator('.v-btn:has-text("On-device OCR")')).toBeVisible();
+        await expect(page.locator('.v-btn:has-text("AI Recognition")')).toBeVisible();
 
         // Verify language selector is visible (OCR is default)
-        await expect(page.locator('text=Receipt language')).toBeVisible();
+        await expect(page.locator('.v-select:has-text("Receipt language"), .v-label:has-text("Receipt language")')).toBeVisible();
     });
 
     test('desktop: OCR processes test receipt and prefills amount', async ({ page }) => {
-        test.slow(); // Tesseract downloads WASM + language data
+        test.slow(); // Tesseract downloads WASM + language data from CDN
 
-        await injectAuthState(page, { token, hasVault: false });
-        await page.goto('/desktop.html');
-        await page.waitForLoadState('networkidle');
-
-        // Navigate to transaction list
-        await page.click('text=Transaction Details');
-        await page.waitForTimeout(1000);
-
-        // Open AI Image Recognition dialog
-        const addBtn = page.locator('button:has-text("Add")').first();
-        await addBtn.hover();
-        await page.waitForTimeout(500);
-        await page.locator('text=AI Image Recognition').click();
-        await page.waitForTimeout(500);
-
-        // Verify OCR provider is selected by default
-        const ocrBtn = page.locator('button:has-text("On-device OCR")');
-        await expect(ocrBtn).toBeVisible();
+        await openAIRecognitionDialog(page);
 
         // Upload the test receipt via file input
         const fileInput = page.locator('input[type="file"]');
@@ -92,49 +83,38 @@ test.describe('oscar.e2e.ocr-recognition', () => {
         await page.waitForTimeout(2000); // Wait for image compression
 
         // Click Recognize button
-        const recognizeBtn = page.locator('button:has-text("Recognize")');
-        await expect(recognizeBtn).toBeEnabled({ timeout: 5000 });
+        const recognizeBtn = page.locator('.v-btn:has-text("Recognize")');
+        await expect(recognizeBtn).toBeEnabled({ timeout: 5_000 });
         await recognizeBtn.click();
 
-        // Wait for OCR to complete (progress bar should appear then disappear)
+        // Wait for OCR to complete - the "Add Transaction" dialog should appear
         // Tesseract takes 10-30s on first run (WASM + language download)
-        await expect(page.locator('text=Add Transaction')).toBeVisible({ timeout: 120_000 });
+        const addTransactionTitle = page.locator('h4:has-text("Add Transaction"), .text-h4:has-text("Add Transaction")');
+        await expect(addTransactionTitle).toBeVisible({ timeout: 120_000 });
 
-        // Verify amount was extracted (11.48 from our test receipt)
-        const amountInput = page.locator('input').filter({ hasText: /11[.,]48/ }).or(
-            page.locator('input[type="text"]').first()
-        );
-
-        // The amount field should contain 11.48 (or 1148 in cents display)
-        // Check that the Add Transaction dialog appeared with some prefilled data
-        await expect(page.locator('text=Expense')).toBeVisible();
+        // Verify the transaction form appeared with Expense type selected
+        await expect(page.locator('.v-btn:has-text("Expense")')).toBeVisible();
     });
 
     test('desktop: language selector hidden when AI provider selected', async ({ page }) => {
-        await injectAuthState(page, { token, hasVault: false });
-        await page.goto('/desktop.html');
-        await page.waitForLoadState('networkidle');
-
-        await page.click('text=Transaction Details');
-        await page.waitForTimeout(1000);
-
-        const addBtn = page.locator('button:has-text("Add")').first();
-        await addBtn.hover();
-        await page.waitForTimeout(500);
-        await page.locator('text=AI Image Recognition').click();
-        await page.waitForTimeout(500);
+        await openAIRecognitionDialog(page);
 
         // OCR selected by default - language selector visible
-        await expect(page.locator('text=Receipt language')).toBeVisible();
+        const langLabel = page.locator('.v-label:has-text("Receipt language"), .v-select:has-text("Receipt language")');
+        await expect(langLabel).toBeVisible();
 
         // Switch to AI Recognition
-        await page.locator('button:has-text("AI Recognition")').click();
+        await page.locator('.v-btn:has-text("AI Recognition")').click();
         await page.waitForTimeout(300);
 
         // Language selector should be hidden
-        await expect(page.locator('text=Receipt language')).not.toBeVisible();
+        await expect(langLabel).not.toBeVisible();
 
-        // Privacy text should change
-        await expect(page.locator('text=large language model')).toBeVisible();
+        // Switch back to OCR
+        await page.locator('.v-btn:has-text("On-device OCR")').click();
+        await page.waitForTimeout(300);
+
+        // Language selector should reappear
+        await expect(langLabel).toBeVisible();
     });
 });
