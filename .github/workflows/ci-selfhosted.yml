@@ -140,6 +140,7 @@ jobs:
           OSCAR_SERVER_HTTP_PORT: "18080"
           OSCAR_USER_ENABLE_REGISTER: "true"
           OSCAR_SECURITY_SECRET_KEY: e2e-test-secret-key-not-for-production
+          OSCAR_LLM_TRANSACTION_FROM_AI_IMAGE_RECOGNITION: "true"
 
       - name: Start Vite dev server (proxies API to backend on 18080)
         run: |
