@@ -58,10 +58,10 @@ func (a *ServerSettingsApi) ServerSettingsJavascriptHandler(c *core.WebContext) 
 		a.appendBooleanSetting(builder, "mcp", config.EnableMCPServer)
 	}
 
-	if config.ReceiptImageRecognitionLLMConfig != nil && config.ReceiptImageRecognitionLLMConfig.LLMProvider != "" {
-		if config.TransactionFromAIImageRecognition {
-			a.appendBooleanSetting(builder, "llmt", config.TransactionFromAIImageRecognition)
-		}
+	// Always expose image recognition flag - OCR runs client-side and
+	// does not require an LLM provider to be configured on the server.
+	if config.TransactionFromAIImageRecognition {
+		a.appendBooleanSetting(builder, "llmt", config.TransactionFromAIImageRecognition)
 	}
 
 	if config.LoginPageTips.Enabled {

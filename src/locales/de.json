@@ -1941,6 +1941,7 @@
     "Recognizing...": "Erkennung laeuft...",
     "Extracting receipt data...": "Belegdaten werden extrahiert...",
     "Loading language data...": "Sprachdaten werden geladen...",
+    "Receipt language": "Belegsprache",
     "Category": "Kategorie",
     "Secondary Category": "Secondary Category",
     "Expense Category": "Expense Category",

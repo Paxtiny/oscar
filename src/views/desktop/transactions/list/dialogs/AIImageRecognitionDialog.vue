@@ -6,14 +6,26 @@
             </template>
 
             <v-card-text class="pt-0 pb-2">
-                <v-btn-toggle v-model="selectedProvider" mandatory density="comfortable" class="w-100">
-                    <v-btn :value="RecognitionProviderType.OCR" class="flex-grow-1">
-                        {{ tt('On-device OCR') }}
-                    </v-btn>
-                    <v-btn :value="RecognitionProviderType.LLM" class="flex-grow-1">
-                        {{ tt('AI Recognition') }}
-                    </v-btn>
-                </v-btn-toggle>
+                <div class="d-flex align-center gap-2">
+                    <v-btn-toggle v-model="selectedProvider" mandatory density="comfortable" class="flex-grow-1">
+                        <v-btn :value="RecognitionProviderType.OCR" class="flex-grow-1">
+                            {{ tt('On-device OCR') }}
+                        </v-btn>
+                        <v-btn :value="RecognitionProviderType.LLM" class="flex-grow-1">
+                            {{ tt('AI Recognition') }}
+                        </v-btn>
+                    </v-btn-toggle>
+                    <v-select v-if="selectedProvider === RecognitionProviderType.OCR"
+                              v-model="selectedLanguage"
+                              :items="ocrLanguages"
+                              item-title="displayName"
+                              item-value="code"
+                              :label="tt('Receipt language')"
+                              density="compact"
+                              hide-details
+                              variant="outlined"
+                              style="max-width: 160px" />
+                </div>
             </v-card-text>
 
             <v-card-text class="d-flex flex-column flex-md-row flex-grow-1 overflow-y-auto" style="height: 480px">
@@ -86,7 +98,10 @@ import type { RecognitionProgress } from '@/lib/recognition/types.ts';
 import { generateRandomUUID } from '@/lib/misc.ts';
 import { compressJpgImage } from '@/lib/ui/common.ts';
 import { getSessionCurrentLanguageKey } from '@/lib/settings.ts';
+import { getOcrLanguageOptions, getDefaultOcrLanguage } from '@/lib/recognition/language-map.ts';
 import logger from '@/lib/logger.ts';
+
+const ocrLanguages = getOcrLanguageOptions();
 
 type SnackBarType = InstanceType<typeof SnackBar>;
 
@@ -110,6 +125,7 @@ const imageFile = ref<File | null>(null);
 const imageSrc = ref<string | undefined>(undefined);
 const isDragOver = ref<boolean>(false);
 const selectedProvider = ref<RecognitionProviderType>(RecognitionProviderType.OCR);
+const selectedLanguage = ref<string>(getDefaultOcrLanguage(getSessionCurrentLanguageKey() || 'en'));
 const recognitionProgress = ref<number>(0);
 const recognitionMessage = ref<string>('');
 
@@ -200,7 +216,9 @@ function recognize(): void {
     recognitionMessage.value = '';
 
     const isOcr = selectedProvider.value === RecognitionProviderType.OCR;
-    const language = getSessionCurrentLanguageKey() || 'en';
+    const language = isOcr
+        ? selectedLanguage.value
+        : getSessionCurrentLanguageKey() || 'en';
 
     transactionsStore.recognizeReceiptImage({
         imageFile: imageFile.value,
