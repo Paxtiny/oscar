@@ -214,7 +214,9 @@ export default defineConfig(() => {
                     chunkFileNames: 'js/[name]-[hash].js',
                     entryFileNames: 'js/[name]-[hash].js',
                     manualChunks: id => {
-                        if (/[\\/]node_modules[\\/]leaflet[\\/]/i.test(id)) {
+                        if (/[\\/]node_modules[\\/]tesseract\.js[\\/]/i.test(id)) {
+                            return 'vendor-ocr';
+                        } else if (/[\\/]node_modules[\\/]leaflet[\\/]/i.test(id)) {
                             return 'leaflet';
                         } else if (/[\\/]node_modules[\\/](moment|moment-timezone)[\\/]/i.test(id)) {
                             return 'moment';
