@@ -79,7 +79,7 @@ const errorMessage = ref('');
 const tierColor = computed(() => {
     switch (tier.value) {
         case 'jared': return 'purple';
-        case 'maurice': return 'primary';
+        case 'pro': return 'primary';
         case 'alfred': return 'success';
         default: return 'grey';
     }
@@ -88,7 +88,7 @@ const tierColor = computed(() => {
 const tierLabel = computed(() => {
     switch (tier.value) {
         case 'jared': return 'nicodAImus jared';
-        case 'maurice': return 'nicodAImus maurice';
+        case 'pro': return 'nicodAImus maurice';
         case 'alfred': return 'nicodAImus alfred';
         default: return 'Free';
     }
