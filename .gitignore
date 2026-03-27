@@ -157,6 +157,11 @@ package/
 .env
 **/.env
 
+# Capacitor Android build artifacts
+android/.gradle/
+android/app/build/
+android/build/
+
 # Other directories
 data/
 storage/

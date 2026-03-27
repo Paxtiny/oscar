@@ -1,0 +1,15 @@
+{
+  "$schema": "https://shadcn-vue.com/schema.json",
+  "style": "default",
+  "typescript": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app/styles/globals.css",
+    "baseColor": "violet"
+  },
+  "framework": "vite",
+  "aliases": {
+    "components": "@/app/components",
+    "utils": "@/app/lib/utils"
+  }
+}
