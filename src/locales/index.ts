@@ -7,6 +7,7 @@ import ja from './ja.json';
 import kn from './kn.json';
 import ko from './ko.json';
 import nl from './nl.json';
+import pl from './pl.json';
 import ru from './ru.json';
 import sl from './sl.json';
 import ta from './ta.json';
@@ -99,6 +100,13 @@ export const ALL_LANGUAGES: Record<string, LanguageInfo> = {
         alternativeLanguageTag: 'nl-NL',
         textDirection: 'ltr',
         content: nl
+    },
+    'pl': {
+        name: 'Polish',
+        displayName: 'Polski',
+        alternativeLanguageTag: 'pl-PL',
+        textDirection: 'ltr',
+        content: pl
     },
     'pt-BR': {
         name: 'Portuguese (Brazil)',

@@ -3,6 +3,7 @@ import { type NavigationGuardReturn, createRouter, createWebHashHistory } from '
 import { TemplateType } from '@/core/template.ts';
 import { isUserLogined, isUserUnlocked, getStoredHasVault } from '@/lib/userstate.ts';
 import { isVaultUnlocked } from '@/lib/vault-service.ts';
+import { shouldRedirectToOnboarding } from './onboarding-guard.ts';
 
 import MainLayout from '@/views/desktop/MainLayout.vue';
 import LoginPage from '@/views/desktop/LoginPage.vue';
@@ -139,6 +140,20 @@ function checkNotLogin(): NavigationGuardReturn {
             path: '/',
             replace: true
         };
+    }
+
+    return true;
+}
+
+function checkOnboarding(): NavigationGuardReturn {
+    // If already logged in, go to normal flow
+    if (isUserLogined()) {
+        return { path: '/', replace: true };
+    }
+
+    // If onboarding already completed (local-only mode or returning user), go to login
+    if (!shouldRedirectToOnboarding()) {
+        return { path: '/login', replace: true };
     }
 
     return true;
@@ -332,6 +347,11 @@ const router = createRouter({
             path: '/vault/unlock',
             component: VaultUnlockPage,
             beforeEnter: checkVaultUnlock
+        },
+        {
+            path: '/onboarding',
+            component: () => import('@/views/desktop/OnboardingPage.vue'),
+            beforeEnter: checkOnboarding
         }
     ],
 })

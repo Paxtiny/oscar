@@ -319,6 +319,11 @@ func startWebServer(c *core.CliContext) error {
 
 		apiRoute.GET("/logout.json", bindApiWithTokenUpdate(api.Tokens.TokenRevokeCurrentHandler, config))
 
+		// Anonymous receipt recognition (onboarding - no auth required)
+		if config.EnableAnonymousReceiptRecognition {
+			apiRoute.POST("/onboarding/recognize_receipt.json", bindApi(api.AnonymousRecognition.AnonymousRecognizeReceiptHandler))
+		}
+
 		apiV1Route := apiRoute.Group("/v1")
 		apiV1Route.Use(bindMiddleware(middlewares.JWTAuthorization(config)))
 		apiV1Route.Use(bindMiddleware(middlewares.APITokenIpLimit(config)))

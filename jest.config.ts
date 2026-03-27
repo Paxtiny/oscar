@@ -9,7 +9,8 @@ const config: JestConfigWithTsJest = {
     clearMocks: true,
     collectCoverage: false,
     moduleNameMapper: {
-        "^@/(.*)$": "<rootDir>/src/$1"
+        "^@/(.*)$": "<rootDir>/src/$1",
+        "^@nicodaimus/crypto$": "<rootDir>/tests/mocks/nicodaimus-crypto.ts"
     },
     testEnvironment: "node",
     testMatch: [

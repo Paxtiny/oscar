@@ -14,7 +14,7 @@
             </div>
         </f7-toolbar>
         <f7-page-content class="no-margin-vertical no-padding-vertical">
-            <div class="recognition-provider-toggle padding-horizontal padding-vertical-half">
+            <div class="recognition-provider-toggle padding-horizontal padding-vertical-half" v-if="!onboardingMode">
                 <f7-segmented strong>
                     <f7-button :active="selectedProvider === RecognitionProviderType.OCR" @click="selectProvider(RecognitionProviderType.OCR)">
                         {{ tt('On-device OCR') }}
@@ -80,8 +80,10 @@ import logger from '@/lib/logger.ts';
 
 const ocrLanguages = getOcrLanguageOptions();
 
-defineProps<{
+const props = defineProps<{
     show: boolean;
+    /** When true, hides provider toggle and language selector. Forces OCR with auto-detected language. */
+    onboardingMode?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -102,7 +104,11 @@ const cancelRecognizingUuid = ref<string | undefined>(undefined);
 const imageFile = ref<File | null>(null);
 const imageSrc = ref<string | undefined>(undefined);
 const selectedProvider = ref<RecognitionProviderType>(RecognitionProviderType.OCR);
-const selectedLanguage = ref<string>(getDefaultOcrLanguage(getSessionCurrentLanguageKey() || 'en'));
+const selectedLanguage = ref<string>(
+    props.onboardingMode
+        ? getDefaultOcrLanguage(navigator.language?.split('-')[0] ?? 'en')
+        : getDefaultOcrLanguage(getSessionCurrentLanguageKey() || 'en')
+);
 const recognitionProgress = ref<number>(0);
 const recognitionMessage = ref<string>('');
 

@@ -335,8 +335,11 @@ type Config struct {
 	WebDAVConfig        *WebDAVConfig
 
 	// Large Language Model
-	TransactionFromAIImageRecognition bool
-	MaxAIRecognitionPictureFileSize   uint32
+	TransactionFromAIImageRecognition      bool
+	MaxAIRecognitionPictureFileSize        uint32
+	EnableAnonymousReceiptRecognition      bool
+	AnonymousReceiptRecognitionPerIPLimit  int
+	AnonymousReceiptRecognitionGlobalLimit int
 
 	// Large Language Model for Receipt Image Recognition
 	ReceiptImageRecognitionLLMConfig *LLMConfig
@@ -854,6 +857,9 @@ func loadStorageConfiguration(config *Config, configFile *ini.File, sectionName 
 func loadLLMGlobalConfiguration(config *Config, configFile *ini.File, sectionName string) error {
 	config.TransactionFromAIImageRecognition = getConfigItemBoolValue(configFile, sectionName, "transaction_from_ai_image_recognition", false)
 	config.MaxAIRecognitionPictureFileSize = getConfigItemUint32Value(configFile, sectionName, "max_ai_recognition_picture_size", defaultAIRecognitionPictureMaxSize)
+	config.EnableAnonymousReceiptRecognition = getConfigItemBoolValue(configFile, sectionName, "enable_anonymous_receipt_recognition", false)
+	config.AnonymousReceiptRecognitionPerIPLimit = int(getConfigItemUint32Value(configFile, sectionName, "anonymous_receipt_recognition_per_ip_limit", 3))
+	config.AnonymousReceiptRecognitionGlobalLimit = int(getConfigItemUint32Value(configFile, sectionName, "anonymous_receipt_recognition_global_limit", 100))
 
 	return nil
 }

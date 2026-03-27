@@ -9,4 +9,6 @@ var (
 	ErrAIRecognitionImageIsEmpty            = NewNormalError(NormalSubcategoryLargeLanguageModel, 2, http.StatusBadRequest, "image for AI recognition is empty")
 	ErrExceedMaxAIRecognitionImageFileSize  = NewNormalError(NormalSubcategoryLargeLanguageModel, 3, http.StatusBadRequest, "exceed the maximum size of image file for AI recognition")
 	ErrNoTransactionInformationInImage      = NewNormalError(NormalSubcategoryLargeLanguageModel, 4, http.StatusBadRequest, "no transaction information detected")
+	ErrAnonymousRecognitionRateLimited      = NewNormalError(NormalSubcategoryLargeLanguageModel, 5, http.StatusTooManyRequests, "too many anonymous recognition requests")
+	ErrAnonymousRecognitionNotEnabled       = NewNormalError(NormalSubcategoryLargeLanguageModel, 6, http.StatusBadRequest, "anonymous receipt recognition is not enabled")
 )

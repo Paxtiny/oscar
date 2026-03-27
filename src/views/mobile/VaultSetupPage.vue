@@ -81,6 +81,7 @@ import { APPLICATION_LOGO_PATH } from '@/consts/asset.ts';
 
 const props = defineProps<{
     f7router: Router.Router;
+    onSuccess?: () => void | Promise<void>;
 }>();
 
 const { tt } = useI18n();
@@ -102,7 +103,11 @@ const {
 async function handleSetup(): Promise<void> {
     const success = await doSetup();
     if (success) {
-        props.f7router.navigate('/', { clearPreviousHistory: true });
+        if (props.onSuccess) {
+            await props.onSuccess();
+        } else {
+            props.f7router.navigate('/', { clearPreviousHistory: true });
+        }
     }
 }
 </script>

@@ -2,6 +2,7 @@ import type { Router } from 'framework7/types';
 
 import { isUserLogined, isUserUnlocked, getStoredHasVault } from '@/lib/userstate.ts';
 import { isVaultUnlocked } from '@/lib/vault-service.ts';
+import { shouldRedirectToOnboarding, isOnboardingCompleted } from './onboarding-guard.ts';
 
 import HomePage from '@/views/mobile/HomePage.vue';
 import LoginPage from '@/views/mobile/LoginPage.vue';
@@ -58,6 +59,18 @@ function asyncResolve(component: unknown): (ctx: Router.RouteCallbackCtx) => voi
             component: component
         });
     } as unknown as (ctx: Router.RouteCallbackCtx) => void;
+}
+
+function checkLoginOrGuest({ router, resolve, reject }: { router: Router.Router, resolve: () => void, reject: () => void }): void {
+    // Guest mode: user completed onboarding but skipped registration.
+    // Allow access to homepage with local IndexedDB data only.
+    if (!isUserLogined() && isOnboardingCompleted()) {
+        resolve();
+        return;
+    }
+
+    // Delegate to normal login check
+    checkLogin({ router, resolve, reject });
 }
 
 function checkLogin({ router, resolve, reject }: { router: Router.Router, resolve: () => void, reject: () => void }): void {
@@ -141,6 +154,39 @@ function checkNotLogin({ router, resolve, reject }: { router: Router.Router, res
         return;
     }
 
+    // First-time users who haven't onboarded yet should see onboarding, not login
+    if (shouldRedirectToOnboarding()) {
+        reject();
+        router.navigate('/onboarding', {
+            clearPreviousHistory: true,
+            browserHistory: false
+        });
+        return;
+    }
+
+    resolve();
+}
+
+function checkOnboarding({ router, resolve, reject }: { router: Router.Router, resolve: () => void, reject: () => void }): void {
+    if (isUserLogined()) {
+        reject();
+        router.navigate('/', {
+            clearPreviousHistory: true,
+            browserHistory: false
+        });
+        return;
+    }
+
+    if (!shouldRedirectToOnboarding()) {
+        // Onboarding already done - go to homepage (works for both logged-in and guest mode)
+        reject();
+        router.navigate('/', {
+            clearPreviousHistory: true,
+            browserHistory: false
+        });
+        return;
+    }
+
     resolve();
 }
 
@@ -148,7 +194,7 @@ const routes: Router.RouteParameters[] = [
     {
         path: '/',
         async: asyncResolve(HomePage),
-        beforeEnter: [checkLogin],
+        beforeEnter: [checkLoginOrGuest],
         options: {
             animate: false,
         }
@@ -390,6 +436,14 @@ const routes: Router.RouteParameters[] = [
         path: '/template/edit',
         async: asyncResolve(TransactionEditPage),
         beforeEnter: [checkLogin]
+    },
+    {
+        path: '/onboarding',
+        asyncComponent: () => import('@/views/mobile/OnboardingPage.vue'),
+        beforeEnter: [checkOnboarding],
+        options: {
+            animate: false,
+        }
     },
     {
         path: '(.*)',
