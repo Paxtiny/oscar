@@ -153,6 +153,9 @@ oscar
 !**/oscar/
 package/
 
+# Tesseract OCR language files (large, installed separately via Homebrew)
+*.traineddata
+
 # Environment variable files
 .env
 **/.env
